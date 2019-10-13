@@ -15,13 +15,13 @@ how to use the page table and disk interfaces.
 #include <string.h>
 #include <errno.h>
 
-void page_fault_handler( struct page_table *pt, int page )
+void page_fault_handler( struct page_table* pt, int page )
 {
 	printf("page fault on page #%d\n",page);
 	exit(1);
 }
 
-int main( int argc, char *argv[] )
+int main( int argc, char* argv[] )
 {
 	if(argc!=5) {
 		printf("use: virtmem <npages> <nframes> <lru|fifo> <access pattern>\n");
@@ -30,35 +30,44 @@ int main( int argc, char *argv[] )
 
 	int npages = atoi(argv[1]);
 	int nframes = atoi(argv[2]);
-	const char *program = argv[4];
+	const char* program = argv[4];
 
-	struct disk *disk = disk_open("myvirtualdisk",npages);
-	if(!disk) {
+	struct disk* disk = disk_open("myvirtualdisk",npages);
+	if (!disk)
+	{
 		fprintf(stderr,"couldn't create virtual disk: %s\n",strerror(errno));
 		return 1;
 	}
 
 
-	struct page_table *pt = page_table_create( npages, nframes, page_fault_handler );
-	if(!pt) {
+	struct page_table* pt = page_table_create( npages, nframes, page_fault_handler );
+	if (!pt)
+	{
 		fprintf(stderr,"couldn't create page table: %s\n",strerror(errno));
 		return 1;
 	}
 
-	char *virtmem = page_table_get_virtmem(pt);
+	char* virtmem = page_table_get_virtmem(pt);
 
-	char *physmem = page_table_get_physmem(pt);
+	char* physmem = page_table_get_physmem(pt);
 
-	if(!strcmp(program,"pattern1")) {
+	if (!strcmp(program,"pattern1"))
+	{
 		access_pattern1(virtmem,npages*PAGE_SIZE);
 
-	} else if(!strcmp(program,"pattern2")) {
+	}
+	else if (!strcmp(program,"pattern2"))
+	{
 		access_pattern2(virtmem,npages*PAGE_SIZE);
 
-	} else if(!strcmp(program,"pattern3")) {
+	}
+	else if (!strcmp(program,"pattern3"))
+	{
 		access_pattern3(virtmem,npages*PAGE_SIZE);
 
-	} else {
+	}
+	else
+	{
 		fprintf(stderr,"unknown program: %s\n",argv[3]);
 
 	}

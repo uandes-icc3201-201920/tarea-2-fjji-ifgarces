@@ -18,67 +18,69 @@ Make all of your changes to main.c instead.
 #include "page_table.h"
 
 struct page_table {
-	int fd;
-	char *virtmem;
-	int npages;
-	char *physmem;
-	int nframes;
-	int *page_mapping;
-	int *page_bits;
+	int fd;             // descriptor/ID de archivo (file descriptor)
+	char* virtmem;      // memoria virtual (VirtMem)
+	int npages;         // cantidad de páginas de la memoria virtual
+	char* physmem;      // memoria física (PhysMem)
+	int nframes;        // cantidad de cuadros de la memoria física
+	int* page_mapping;
+	int* page_bits;     // array de ints. Serán que page_bits[k] será el bit de validez de la página k?
 	page_fault_handler_t handler;
 };
 
-struct page_table *the_page_table = 0;
+struct page_table* the_page_table = 0;
 
-static void internal_fault_handler( int signum, siginfo_t *info, void *context )
+static void internal_fault_handler( int signum, siginfo_t* info, void* context )
 {
 
 #ifdef i386
-	char *addr = (char*)(((struct ucontext *)context)->uc_mcontext.cr2);
+	char* addr = (char*)( ((struct ucontext*) context)->uc_mcontext.cr2 );
 #else
-	char *addr = info->si_addr;
+	char* addr = info->si_addr;
 #endif
 
-	struct page_table *pt = the_page_table;
+	struct page_table* pt = the_page_table;
 
-	if(pt) {
-		int page = (addr-pt->virtmem) / PAGE_SIZE;
+	if (pt)
+	{
+		int page = (addr - pt->virtmem) / PAGE_SIZE;
 
-		if(page>=0 && page<pt->npages) {
-			pt->handler(pt,page);
+		if (page >= 0 && page < pt->npages)
+		{
+			pt->handler(pt, page);
 			return;
 		}
 	}
 
-	fprintf(stderr,"segmentation fault at address %p\n",addr);
+	fprintf(stderr, "segmentation fault at address %p\n", addr);
 	abort();
 }
 
-struct page_table * page_table_create( int npages, int nframes, page_fault_handler_t handler )
+struct page_table* page_table_create( int npages, int nframes, page_fault_handler_t handler )
 {
 	int i;
 	struct sigaction sa;
-	struct page_table *pt;
+	struct page_table* pt;
 	char filename[256];
 
 	pt = malloc(sizeof(struct page_table));
-	if(!pt) return 0;
+	if (!pt) return 0;
 
 	the_page_table = pt;
 
-	sprintf(filename,"/tmp/pmem.%d.%d",getpid(),getuid());
+	sprintf(filename, "/tmp/pmem.%d.%d", getpid(), getuid());
 
-	pt->fd = open(filename,O_CREAT|O_TRUNC|O_RDWR,0777);
-	if(!pt->fd) return 0;
+	pt->fd = open(filename, O_CREAT|O_TRUNC|O_RDWR, 0777);
+	if (!pt->fd) return 0;
 
-	ftruncate(pt->fd,PAGE_SIZE*npages);
+	ftruncate(pt->fd, PAGE_SIZE*npages);
 
 	unlink(filename);
 
-	pt->physmem = mmap(0,nframes*PAGE_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,pt->fd,0);
+	pt->physmem = mmap(0, nframes*PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, pt->fd, 0);
 	pt->nframes = nframes;
 
-	pt->virtmem = mmap(0,npages*PAGE_SIZE,PROT_NONE,MAP_SHARED|MAP_NORESERVE,pt->fd,0);
+	pt->virtmem = mmap(0, npages*PAGE_SIZE, PROT_NONE, MAP_SHARED|MAP_NORESERVE, pt->fd, 0);
 	pt->npages = npages;
 
 	pt->page_bits = malloc(sizeof(int)*npages);
@@ -86,7 +88,7 @@ struct page_table * page_table_create( int npages, int nframes, page_fault_handl
 
 	pt->handler = handler;
 
-	for(i=0;i<pt->npages;i++) pt->page_bits[i] = 0;
+	for (i = 0; i < pt->npages; i++) pt->page_bits[i] = 0;
 
 	sa.sa_sigaction = internal_fault_handler;
 	sa.sa_flags = SA_SIGINFO;
@@ -97,39 +99,40 @@ struct page_table * page_table_create( int npages, int nframes, page_fault_handl
 	return pt;
 }
 
-void page_table_delete( struct page_table *pt )
+void page_table_delete( struct page_table* pt )
 {
-	munmap(pt->virtmem,pt->npages*PAGE_SIZE);
-	munmap(pt->physmem,pt->nframes*PAGE_SIZE);
+	munmap(pt->virtmem, pt->npages*PAGE_SIZE);
+	munmap(pt->physmem, pt->nframes*PAGE_SIZE);
 	free(pt->page_bits);
 	free(pt->page_mapping);
 	close(pt->fd);
 	free(pt);
 }
 
-void page_table_set_entry( struct page_table *pt, int page, int frame, int bits )
+void page_table_set_entry( struct page_table* pt, int page, int frame, int bits )
 {
-	if( page<0 || page>=pt->npages ) {
-		fprintf(stderr,"page_table_set_entry: illegal page #%d\n",page);
+	if ( page < 0 || page >= pt->npages ) {
+		fprintf(stderr, "page_table_set_entry: illegal page #%d\n", page);
 		abort();
 	}
 
-	if( frame<0 || frame>=pt->nframes ) {
-		fprintf(stderr,"page_table_set_entry: illegal frame #%d\n",frame);
+	if ( frame < 0 || frame >= pt->nframes ) {
+		fprintf(stderr, "page_table_set_entry: illegal frame #%d\n", frame);
 		abort();
 	}
 
 	pt->page_mapping[page] = frame;
 	pt->page_bits[page] = bits;
 
-	remap_file_pages(pt->virtmem+page*PAGE_SIZE,PAGE_SIZE,0,frame,0);
-	mprotect(pt->virtmem+page*PAGE_SIZE,PAGE_SIZE,bits);
+	remap_file_pages(pt->virtmem + page*PAGE_SIZE, PAGE_SIZE, 0, frame, 0);
+	mprotect(pt->virtmem+page*PAGE_SIZE, PAGE_SIZE, bits);
 }
 
-void page_table_get_entry( struct page_table *pt, int page, int *frame, int *bits )
+void page_table_get_entry( struct page_table* pt, int page, int* frame, int* bits )
 {
-	if( page<0 || page>=pt->npages ) {
-		fprintf(stderr,"page_table_get_entry: illegal page #%d\n",page);
+	if ( page < 0 || page >= pt->npages )
+	{
+		fprintf(stderr, "page_table_get_entry: illegal page #%d\n", page);
 		abort();
 	}
 
@@ -137,10 +140,11 @@ void page_table_get_entry( struct page_table *pt, int page, int *frame, int *bit
 	*bits = pt->page_bits[page];
 }
 
-void page_table_print_entry( struct page_table *pt, int page )
+void page_table_print_entry( struct page_table* pt, int page )
 {
-	if( page<0 || page>=pt->npages ) {
-		fprintf(stderr,"page_table_print_entry: illegal page #%d\n",page);
+	if ( page < 0 || page >= pt->npages )
+	{
+		fprintf(stderr, "page_table_print_entry: illegal page #%d\n", page);
 		abort();
 	}
 
@@ -149,37 +153,37 @@ void page_table_print_entry( struct page_table *pt, int page )
 	printf("page %06d: frame %06d bits %c%c%c\n",
 		page,
 		pt->page_mapping[page],
-		b&PROT_READ  ? 'r' : '-',
-		b&PROT_WRITE ? 'w' : '-',
-		b&PROT_EXEC  ? 'x' : '-'
+		b & PROT_READ  ? 'r' : '-',   // [??]
+		b & PROT_WRITE ? 'w' : '-',
+		b & PROT_EXEC  ? 'x' : '-'
 	);
-
 }
 
-void page_table_print( struct page_table *pt )
+void page_table_print( struct page_table* pt )
 {
 	int i;
-	for(i=0;i<pt->npages;i++) {
-		page_table_print_entry(pt,i);
+	for (i = 0; i < pt->npages; i++)
+	{
+		page_table_print_entry(pt, i);
 	}
 }
 
-int page_table_get_nframes( struct page_table *pt )
+int page_table_get_nframes( struct page_table* pt )
 {
 	return pt->nframes;
 }
 
-int page_table_get_npages( struct page_table *pt )
+int page_table_get_npages( struct page_table* pt )
 {
 	return pt->npages;
 }
 
-char * page_table_get_virtmem( struct page_table *pt )
+char* page_table_get_virtmem( struct page_table* pt )
 {
 	return pt->virtmem;
 }
 
-char * page_table_get_physmem( struct page_table *pt )
+char* page_table_get_physmem( struct page_table* pt )
 {
 	return pt->physmem;
 }

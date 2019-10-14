@@ -14,6 +14,7 @@ Make all of your changes to main.c instead.
 #include <fcntl.h>
 #include <stdlib.h>
 #include <ucontext.h>
+#include <signal.h>
 
 #include "page_table.h"
 
@@ -23,9 +24,9 @@ struct page_table {
 	int npages;         // cantidad de páginas de la memoria virtual
 	char* physmem;      // memoria física (PhysMem)
 	int nframes;        // cantidad de cuadros de la memoria física
-	int* page_mapping;
-	int* page_bits;     // array de ints. Serán que page_bits[k] será el bit de validez de la página k?
-	page_fault_handler_t handler;
+	int* page_mapping;  // [??]
+	int* page_bits;     // array de ints. ¿Será que page_bits[k] es el bit de validez de la página k?
+	page_fault_handler_t handler;  // [??] puntero a función? un struct? qué es page_fault_handler_t?
 };
 
 struct page_table* the_page_table = 0;
@@ -33,7 +34,7 @@ struct page_table* the_page_table = 0;
 static void internal_fault_handler( int signum, siginfo_t* info, void* context )
 {
 
-#ifdef i386
+#ifdef i386      // [??]
 	char* addr = (char*)( ((struct ucontext*) context)->uc_mcontext.cr2 );
 #else
 	char* addr = info->si_addr;
@@ -70,10 +71,10 @@ struct page_table* page_table_create( int npages, int nframes, page_fault_handle
 
 	sprintf(filename, "/tmp/pmem.%d.%d", getpid(), getuid());
 
-	pt->fd = open(filename, O_CREAT|O_TRUNC|O_RDWR, 0777);
+	pt->fd = open(filename, O_CREAT|O_TRUNC|O_RDWR, 0777);   // abre archivo con permisos de lectura, escritura y ejecución.
 	if (!pt->fd) return 0;
 
-	ftruncate(pt->fd, PAGE_SIZE*npages);
+	ftruncate(pt->fd, PAGE_SIZE*npages);    // establece el tamaño del archivo en el necesario exactamente para el disco.
 
 	unlink(filename);
 
@@ -101,7 +102,7 @@ struct page_table* page_table_create( int npages, int nframes, page_fault_handle
 
 void page_table_delete( struct page_table* pt )
 {
-	munmap(pt->virtmem, pt->npages*PAGE_SIZE);
+	munmap(pt->virtmem, pt->npages*PAGE_SIZE);    // borra los mapas
 	munmap(pt->physmem, pt->nframes*PAGE_SIZE);
 	free(pt->page_bits);
 	free(pt->page_mapping);
@@ -111,12 +112,14 @@ void page_table_delete( struct page_table* pt )
 
 void page_table_set_entry( struct page_table* pt, int page, int frame, int bits )
 {
-	if ( page < 0 || page >= pt->npages ) {
+	if ( page < 0 || page >= pt->npages )
+	{
 		fprintf(stderr, "page_table_set_entry: illegal page #%d\n", page);
 		abort();
 	}
 
-	if ( frame < 0 || frame >= pt->nframes ) {
+	if ( frame < 0 || frame >= pt->nframes )
+	{
 		fprintf(stderr, "page_table_set_entry: illegal frame #%d\n", frame);
 		abort();
 	}
@@ -124,8 +127,16 @@ void page_table_set_entry( struct page_table* pt, int page, int frame, int bits 
 	pt->page_mapping[page] = frame;
 	pt->page_bits[page] = bits;
 
-	remap_file_pages(pt->virtmem + page*PAGE_SIZE, PAGE_SIZE, 0, frame, 0);
-	mprotect(pt->virtmem+page*PAGE_SIZE, PAGE_SIZE, bits);
+	remap_file_pages(pt->virtmem + page*PAGE_SIZE, PAGE_SIZE, 0, frame, 0);  // hace un mapeo no ordenado de las páginas (...) para ahorrar cambiar a modo Kernel
+	mprotect(pt->virtmem+page*PAGE_SIZE, PAGE_SIZE, bits);    // cambia protección de la región de memoria donde se encuentra la página al nivel de protección dado por "bits".
+	/* aquí, bits puede ser: PROT_NONE (acceso nulo, a nadie),
+	                         PROT_READ (sólo lectura),
+	                         PROT_WRITE (sólo escritura),
+	                         PROT_EXEC (permisos de ejecución),
+	                         PROT_SEM (permite operaciones atómicas [...]),
+	                         PROT_SAO (acceso ordenado [...]),
+	                         PROT_GROWSUP (protección crece hacia arriba del mapa [...]),
+	                         PROT_GROWSDOWN (protección crece del inicio del mapa hacia el final [...]) */
 }
 
 void page_table_get_entry( struct page_table* pt, int page, int* frame, int* bits )

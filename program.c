@@ -13,11 +13,11 @@ static int compare_bytes( const void* pa, const void* pb )
 	int a = *(char*)pa;
 	int b = *(char*)pb;
 
-	if(a<b)
+	if (a < b)
 	{
 		return -1;
 	}
-	else if(a==b)
+	else if (a == b)
 	{
 		return 0;
 	}

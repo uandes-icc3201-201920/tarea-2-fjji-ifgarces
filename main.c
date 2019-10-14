@@ -14,6 +14,7 @@ how to use the page table and disk interfaces.
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <signal.h>
 
 void page_fault_handler( struct page_table* pt, int page )
 {

@@ -17,3 +17,7 @@ program.o: program.c
 
 clean:
 	rm -f *.o virtmem
+
+compress:
+	tar -zcvf TAREA2_fjji_ifgarces.tar.gz makefile *.c *.h informe-t2.pdf
+	

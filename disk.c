@@ -3,7 +3,7 @@ Do not modify this file.
 Make all of your changes to main.c instead.
 */
 
-//#include "disk.h"
+#include "disk.h"  // ?
 
 #include <unistd.h>
 #include <stdio.h>
@@ -16,7 +16,8 @@ extern ssize_t pread(int __fd, void* __buf, size_t __nbytes, __off_t __offset);
 extern ssize_t pwrite(int __fd, const void* __buf, size_t __nbytes, __off_t __offset);
 
 
-struct disk {
+struct disk
+{
 	int fd;
 	int block_size;
 	int nblocks;

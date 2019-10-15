@@ -1,4 +1,3 @@
-
 /*
 Do not modify this file.
 Make all of your changes to main.c instead.
@@ -18,27 +17,27 @@ Make all of your changes to main.c instead.
 
 #include "page_table.h"
 
-struct page_table {
+struct page_table
+{
 	int fd;             // descriptor/ID de archivo (file descriptor)
 	char* virtmem;      // memoria virtual (VirtMem)
 	int npages;         // cantidad de páginas de la memoria virtual
 	char* physmem;      // memoria física (PhysMem)
 	int nframes;        // cantidad de cuadros de la memoria física
-	int* page_mapping;  // [??]
-	int* page_bits;     // array de ints. ¿Será que page_bits[k] es el bit de validez de la página k?
-	page_fault_handler_t handler;  // [??] puntero a función? un struct? qué es page_fault_handler_t?
+	int* page_mapping;  // tabla de página (...)
+	int* page_bits;     // bits de modo de apertura de página (lectura, escritura, ...)
+	page_fault_handler_t handler;  // puntero a función
 };
 
 struct page_table* the_page_table = 0;
 
 static void internal_fault_handler( int signum, siginfo_t* info, void* context )
 {
-
-#ifdef i386      // [??]
-	char* addr = (char*)( ((struct ucontext*) context)->uc_mcontext.cr2 );
-#else
-	char* addr = info->si_addr;
-#endif
+	#ifdef i386   // [??]
+		char* addr = (char*)( ((struct ucontext*) context)->uc_mcontext.cr2 );
+	#else
+		char* addr = info->si_addr;
+	#endif
 
 	struct page_table* pt = the_page_table;
 

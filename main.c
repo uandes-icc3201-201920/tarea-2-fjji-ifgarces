@@ -9,6 +9,7 @@ how to use the page table and disk interfaces.
 #include "page_table.h"
 #include "disk.h"
 #include "program.h"
+//#include "ColorMaster.c"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,12 +20,14 @@ how to use the page table and disk interfaces.
 void page_fault_handler( struct page_table* pt, int page )
 {
 	printf("page fault on page #%d\n",page);
+	//... rellenar aquí
 	exit(1);
 }
 
 int main( int argc, char* argv[] )
 {
-	if(argc!=5) {
+	if (argc != 5)
+	{
 		printf("use: virtmem <npages> <nframes> <lru|fifo> <access pattern>\n");
 		return 1;
 	}
@@ -55,24 +58,39 @@ int main( int argc, char* argv[] )
 	if (!strcmp(program,"pattern1"))
 	{
 		access_pattern1(virtmem,npages*PAGE_SIZE);
-
 	}
+	
 	else if (!strcmp(program,"pattern2"))
 	{
 		access_pattern2(virtmem,npages*PAGE_SIZE);
-
 	}
+	
 	else if (!strcmp(program,"pattern3"))
 	{
 		access_pattern3(virtmem,npages*PAGE_SIZE);
-
 	}
+	
 	else
 	{
 		fprintf(stderr,"unknown program: %s\n",argv[3]);
-
 	}
 
+	
+	/* printf("Page Table status: \n");
+	printf(" fd\t virtmem\t npages\t physmem\t nframes\t page_mapping\t page_bits\t\n");
+	printf(" %d\t %s\t %d\t %s\t %d\t ", pt->fd, pt->virtmem, pt->npages, pt->physmem, pt->nframes);
+	unsigned int k;
+	
+	for (k = 0; k < (sizeof(pt->page_mapping)/sizeof(int)); k++)
+	{
+		printf("%d", pt->page_mapping[k]);
+	}
+	printf("\t ");
+	for (k=0; k<sizeof(pt->page_bits)/sizeof(int); k++)
+	{
+		printf("%d", pt->page_bits[k]);
+	} */
+	
 	page_table_delete(pt);
 	disk_close(disk);
 

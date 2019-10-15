@@ -9,7 +9,7 @@
 
 struct page_table;
 
-typedef void (*page_fault_handler_t) ( struct page_table* pt, int page );   // [??] no entiendo esta línea.
+typedef void (*page_fault_handler_t) ( struct page_table* pt, int page );   // definiendo un puntero a función llamado page_fault_handler_t que es definido en main.c
 
 /* Create a new page table, along with a corresponding virtual memory
 that is "npages" big and a physical memory that is "nframes" big

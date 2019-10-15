@@ -9,7 +9,8 @@ how to use the page table and disk interfaces.
 #include "page_table.h"
 #include "disk.h"
 #include "program.h"
-//#include "ColorMaster.c"
+#include "ColorMaster.h"
+int BLACK = 30, RED = 31, GREEN = 32, YELLOW = 33, BLUE = 34, MAGENTA = 35, PURPLE = 35, CYAN = 36, WHITE = 37;
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,11 +21,11 @@ how to use the page table and disk interfaces.
 void page_fault_handler( struct page_table* pt, int page )
 {
 	printf("page fault on page #%d\n",page);
-	//... rellenar aquí
+	//... rellénese aquí.
 	exit(1);
 }
 
-int main( int argc, char* argv[] )
+int main(int argc, char* argv[])
 {
 	if (argc != 5)
 	{
@@ -34,7 +35,7 @@ int main( int argc, char* argv[] )
 
 	int npages = atoi(argv[1]);
 	int nframes = atoi(argv[2]);
-	const char* program = argv[4];
+	const char* program = argv[4];   // pattern type: pattern<1|2|3>
 
 	struct disk* disk = disk_open("myvirtualdisk",npages);
 	if (!disk)
@@ -90,6 +91,7 @@ int main( int argc, char* argv[] )
 	{
 		printf("%d", pt->page_bits[k]);
 	} */
+	
 	
 	page_table_delete(pt);
 	disk_close(disk);

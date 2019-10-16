@@ -4,6 +4,7 @@
 #include <string.h>
 #include <assert.h>
 
+
 /// forma de uso:
 ///		> printcolor(RED, "texto en rojo.\n")
 void printcolor(int colorcode, const char* text)

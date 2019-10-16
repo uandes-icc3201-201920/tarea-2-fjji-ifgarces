@@ -18,9 +18,9 @@ int BLACK = 30, RED = 31, GREEN = 32, YELLOW = 33, BLUE = 34, MAGENTA = 35, PURP
 #include <errno.h>
 #include <signal.h>
 
-int* free_frames;   // array de índices de marcos libres
+int* free_frames;   // array con índices de marcos libres
 struct disk* disk;
-char* BUFFER;
+char* BUFFER;   // string donde se escribe-lee al disco.
 
 void page_fault_handler( struct page_table* pt, int page )
 {   // SE GATILLA AL QUERER ACCEDER A UNA PÁGINA QUE NO ESTÁ EN MEMORIA VIRTUAL (pt->virtmem) Y HAY QUE TRAERLA DESDE EL DISCO (disk)
@@ -30,7 +30,10 @@ void page_fault_handler( struct page_table* pt, int page )
 	
 	BUFFER = malloc(sizeof(char)*40);
 	strcpy(BUFFER, "");
-	disk_read(disk, disk->block_size*?, BUFFER);
+	///disk_read(disk, disk->block_size*page, BUFFER);
+	    // [??] Cómo sé cuál bloque del disco leer? Cómo obtengo el bloque en el que está la página "page"?
+	
+	
 	
 	exit(1);
 }
@@ -42,7 +45,9 @@ int main(int argc, char* argv[])
 		printf("use: ./virtmem <npages> <nframes> <lru|fifo> <pattern1|pattern2|pattern3>\n");
 		return 1;
 	}
-
+	
+	printf("%d\n", TEST);   // de page_table
+	
 	int npages = atoi(argv[1]);
 	int nframes = atoi(argv[2]);
 	const char* policy = argv[3];
@@ -50,8 +55,7 @@ int main(int argc, char* argv[])
 	
 	free_frames = malloc(sizeof(int)*nframes);
 
-	//struct disk* disk = disk_open("myvirtualdisk", npages);
-	disk = disk_open("myvirtualdisk", npages);
+	disk = disk_open("myvirtualdisk", npages);   //struct disk* disk = disk_open("myvirtualdisk", npages);
 	if (! disk)
 	{
 		fprintf(stderr, "couldn't create virtual disk: %s\n", strerror(errno));
@@ -89,7 +93,7 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "unknown pattern: %s\n", argv[3]);
 	}
 	
-
+/*
 color_start(BLUE);
 	printf("[TEST] Page Table status: \n");
 	printf(" fd\t virtmem\t npages\t physmem\t nframes\t page_mapping\t page_bits\t\n");
@@ -106,6 +110,7 @@ color_start(BLUE);
 		printf("%d", pt->page_bits[k]);
 	}
 color_end();
+*/
 	
 	page_table_delete(pt);
 	disk_close(disk);

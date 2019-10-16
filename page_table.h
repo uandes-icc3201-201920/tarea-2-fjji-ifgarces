@@ -1,11 +1,13 @@
 #ifndef PAGE_TABLE_H
 #define PAGE_TABLE_H
 
-#include <sys/mman.h>
+//#include <sys/mman.h>
 
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
 #endif
+
+int TEST;
 
 struct page_table;
 

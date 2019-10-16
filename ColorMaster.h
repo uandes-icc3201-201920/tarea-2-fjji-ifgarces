@@ -7,6 +7,8 @@
 char* _head;
 char* _foot;
 
+char testvar[10];
+
 /// colo colorea texto, no fondo.
 void printcolor(int colorcode, const char* text);
 void color_start(int colorcode);

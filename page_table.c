@@ -17,8 +17,6 @@ Make all of your changes to main.c instead.
 #include <ucontext.h>
 #include <signal.h>
 
-TEST = 504;
-
 struct page_table
 {
 	int fd;             // descriptor/ID de archivo (File Descriptor)

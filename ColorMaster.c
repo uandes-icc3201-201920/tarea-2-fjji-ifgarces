@@ -10,8 +10,8 @@
 void printcolor(int colorcode, const char* text)
 {
 	assert((colorcode >= 30) && (colorcode <= 37));
-	_head = (char*) malloc(sizeof(char)*25);
-	_foot = (char*) malloc(sizeof(char)*25);
+	_head = (char*) malloc(sizeof(char)*20);
+	_foot = (char*) malloc(sizeof(char)*20);
 	strcpy(_foot, "\033[0m");
 	sprintf(_head, "\033[1;%dm", colorcode);  // formato: "\033[<STYLE>;<COLOR>m<MY_TEXT>\033[0m"
 	
@@ -20,10 +20,21 @@ void printcolor(int colorcode, const char* text)
 	free(_foot);
 }
 
+void printcolor_charasterisco(int colorcode, char* text)
+{
+	assert((colorcode >= 30) && (colorcode <= 37));
+	_head = (char*) malloc(sizeof(char)*25);
+	_foot = (char*) malloc(sizeof(char)*25);
+	strcpy(_foot, "\033[0m");
+	sprintf(_head, "\033[1;%dm", colorcode);  // formato: "\033[<STYLE>;<COLOR>m<MY_TEXT>\033[0m"
+	
+	printf("%s%s%s", _head, text, _foot);
+	free(_head);
+}
 
 
 /// forma de uso:
-///		> color_start(RED); printf("mensaje con printf en %s", "rojo"); color_end()
+///		> color_start(CYAN); printf("mensaje con printf en %s", "color \'cián\'"); color_end()
 void color_start(int colorcode)
 {
 	assert((colorcode >= 30) && (colorcode <= 37));
@@ -35,5 +46,5 @@ void color_start(int colorcode)
 
 void color_end()
 {
-	printf("\033[0m");
+	printf(" \033[0m");
 }

@@ -19,31 +19,18 @@ int BLACK = 30, RED = 31, GREEN = 32, YELLOW = 33, BLUE = 34, MAGENTA = 35, PURP
 #include <signal.h>
 
 int* free_frames;   // array de índices de marcos libres
+struct disk* disk;
+char* BUFFER;
 
 void page_fault_handler( struct page_table* pt, int page )
-{   // SE GATILLA AL QUERER ACCEDER A UNA PÁGINA QUE NO ESTÁ EN MEMORIA FÍSICA (physmem) Y HAY QUE TRAERLA DE MEMORIA VIRTUAL (virtmem)
+{   // SE GATILLA AL QUERER ACCEDER A UNA PÁGINA QUE NO ESTÁ EN MEMORIA VIRTUAL (pt->virtmem) Y HAY QUE TRAERLA DESDE EL DISCO (disk)
 	color_start(RED);
 	printf("page fault on page #%d\n", page);
 	color_end();
 	
-	int is_full = 1;   // verdadero si la tabla de páginas pt está llena de páginas.
-	int k;
-	for (k = 0; k < pt->nframes; k++)  // recorriendo páginas
-	{
-		if (pt->physmem[k] == NULL)
-		{  // encontró una libre 
-			is_full = 0;
-			break;
-		}
-	}
-	
-	printf("Page table status: \n");
-	printf("    > Full: %s\n", (is_full ? "true": "false"));
-	
-	if (is_full)  // ALGORITMO DE REEMPLAZO DE PÁGINA
-	{
-		
-	}
+	BUFFER = malloc(sizeof(char)*40);
+	strcpy(BUFFER, "");
+	disk_read(disk, disk->block_size*?, BUFFER);
 	
 	exit(1);
 }
@@ -63,7 +50,8 @@ int main(int argc, char* argv[])
 	
 	free_frames = malloc(sizeof(int)*nframes);
 
-	struct disk* disk = disk_open("myvirtualdisk", npages);
+	//struct disk* disk = disk_open("myvirtualdisk", npages);
+	disk = disk_open("myvirtualdisk", npages);
 	if (! disk)
 	{
 		fprintf(stderr, "couldn't create virtual disk: %s\n", strerror(errno));

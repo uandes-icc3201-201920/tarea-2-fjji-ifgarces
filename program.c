@@ -25,20 +25,22 @@ static int compare_bytes( const void* pa, const void* pb )
 	{
 		return 1;
 	}
-
 }
 
 void access_pattern1( char* data, int length )
 {
-	// TODO: Implementar
+	for (int k=0; k<length; k++)
+	{
+		data[k]++;
+	}
 }
 
 void access_pattern2( char* data, int length )
 {
-	// TODO: Implementar
+	// TO-DO: Implementar
 }
 
 void access_pattern3( char* cdata, int length )
 {
-	// TODO: Implementar
+	// TO-DO: Implementar
 }

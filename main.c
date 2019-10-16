@@ -18,10 +18,33 @@ int BLACK = 30, RED = 31, GREEN = 32, YELLOW = 33, BLUE = 34, MAGENTA = 35, PURP
 #include <errno.h>
 #include <signal.h>
 
+int* free_frames;   // array de índices de marcos libres
+
 void page_fault_handler( struct page_table* pt, int page )
-{
-	printf("page fault on page #%d\n",page);
-	//... rellénese aquí.
+{   // SE GATILLA AL QUERER ACCEDER A UNA PÁGINA QUE NO ESTÁ EN MEMORIA FÍSICA (physmem) Y HAY QUE TRAERLA DE MEMORIA VIRTUAL (virtmem)
+	color_start(RED);
+	printf("page fault on page #%d\n", page);
+	color_end();
+	
+	int is_full = 1;   // verdadero si la tabla de páginas pt está llena de páginas.
+	int k;
+	for (k = 0; k < pt->nframes; k++)  // recorriendo páginas
+	{
+		if (pt->physmem[k] == NULL)
+		{  // encontró una libre 
+			is_full = 0;
+			break;
+		}
+	}
+	
+	printf("Page table status: \n");
+	printf("    > Full: %s\n", (is_full ? "true": "false"));
+	
+	if (is_full)  // ALGORITMO DE REEMPLAZO DE PÁGINA
+	{
+		
+	}
+	
 	exit(1);
 }
 
@@ -29,24 +52,26 @@ int main(int argc, char* argv[])
 {
 	if (argc != 5)
 	{
-		printf("use: virtmem <npages> <nframes> <lru|fifo> <access pattern>\n");
+		printf("use: ./virtmem <npages> <nframes> <lru|fifo> <pattern1|pattern2|pattern3>\n");
 		return 1;
 	}
 
 	int npages = atoi(argv[1]);
 	int nframes = atoi(argv[2]);
-	const char* program = argv[4];   // pattern type: pattern<1|2|3>
+	const char* policy = argv[3];
+	const char* pattern = argv[4];  // antes llamado "program"
+	
+	free_frames = malloc(sizeof(int)*nframes);
 
-	struct disk* disk = disk_open("myvirtualdisk",npages);
-	if (!disk)
+	struct disk* disk = disk_open("myvirtualdisk", npages);
+	if (! disk)
 	{
-		fprintf(stderr,"couldn't create virtual disk: %s\n",strerror(errno));
+		fprintf(stderr, "couldn't create virtual disk: %s\n", strerror(errno));
 		return 1;
 	}
 
-
 	struct page_table* pt = page_table_create( npages, nframes, page_fault_handler );
-	if (!pt)
+	if (! pt)
 	{
 		fprintf(stderr,"couldn't create page table: %s\n",strerror(errno));
 		return 1;
@@ -56,42 +81,43 @@ int main(int argc, char* argv[])
 
 	char* physmem = page_table_get_physmem(pt);
 
-	if (!strcmp(program,"pattern1"))
+	if (! strcmp(pattern, "pattern1"))
 	{
-		access_pattern1(virtmem,npages*PAGE_SIZE);
+		access_pattern1(virtmem, npages*PAGE_SIZE);
 	}
 	
-	else if (!strcmp(program,"pattern2"))
+	else if (! strcmp(pattern, "pattern2"))
 	{
-		access_pattern2(virtmem,npages*PAGE_SIZE);
+		access_pattern2(virtmem, npages*PAGE_SIZE);
 	}
 	
-	else if (!strcmp(program,"pattern3"))
+	else if (! strcmp(pattern, "pattern3"))
 	{
-		access_pattern3(virtmem,npages*PAGE_SIZE);
+		access_pattern3(virtmem, npages*PAGE_SIZE);
 	}
 	
 	else
 	{
-		fprintf(stderr,"unknown program: %s\n",argv[3]);
+		fprintf(stderr, "unknown pattern: %s\n", argv[3]);
 	}
-
 	
-	/* printf("Page Table status: \n");
+
+color_start(BLUE);
+	printf("[TEST] Page Table status: \n");
 	printf(" fd\t virtmem\t npages\t physmem\t nframes\t page_mapping\t page_bits\t\n");
 	printf(" %d\t %s\t %d\t %s\t %d\t ", pt->fd, pt->virtmem, pt->npages, pt->physmem, pt->nframes);
 	unsigned int k;
 	
-	for (k = 0; k < (sizeof(pt->page_mapping)/sizeof(int)); k++)
+	for (k = 0; k < sizeof(pt->page_mapping)/sizeof(int); k++)
 	{
 		printf("%d", pt->page_mapping[k]);
 	}
 	printf("\t ");
-	for (k=0; k<sizeof(pt->page_bits)/sizeof(int); k++)
+	for (k = 0; k < sizeof(pt->page_bits)/sizeof(int); k++)
 	{
 		printf("%d", pt->page_bits[k]);
-	} */
-	
+	}
+color_end();
 	
 	page_table_delete(pt);
 	disk_close(disk);

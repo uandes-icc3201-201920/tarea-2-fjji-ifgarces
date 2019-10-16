@@ -17,16 +17,15 @@ Make all of your changes to main.c instead.
 #include <ucontext.h>
 #include <signal.h>
 
-
 struct page_table
 {
-	int fd;             // descriptor/ID de archivo (file descriptor)
+	int fd;             // descriptor/ID de archivo (File Descriptor)
 	char* virtmem;      // memoria virtual (VirtMem)
 	int npages;         // cantidad de páginas de la memoria virtual
 	char* physmem;      // memoria física (PhysMem)
 	int nframes;        // cantidad de cuadros de la memoria física
-	int* page_mapping;  // tabla de página (...)
-	int* page_bits;     // bits de modo de apertura de página (lectura, escritura, ...)
+	int* page_mapping;  // tabla de página (...) La página k es page_maping[k] ?
+	int* page_bits;     // bits de modo de apertura de página (lectura, escritura, ...). page_bits[k] es la protección que tiene la página k
 	page_fault_handler_t handler;  // puntero a función
 };
 
@@ -34,21 +33,21 @@ struct page_table* the_page_table = 0;
 
 static void internal_fault_handler( int signum, siginfo_t* info, void* context )
 {
-	#ifdef i386   // [??]
+	#ifdef i386   // ??
 		char* addr = (char*)( ((struct ucontext*) context)->uc_mcontext.cr2 );
 	#else
 		char* addr = info->si_addr;
 	#endif
 
-	struct page_table* pt = the_page_table;
+	struct page_table* pt = the_page_table;  // != 0 si ya se creó una tabla con page_table_create
 
-	if (pt)
+	if (pt)   // ??
 	{
 		int page = (addr - pt->virtmem) / PAGE_SIZE;
 
 		if (page >= 0 && page < pt->npages)
 		{
-			pt->handler(pt, page);
+			pt->handler(pt, page);  // si es página válida, invoca al manejador de falta de página
 			return;
 		}
 	}
@@ -65,14 +64,14 @@ struct page_table* page_table_create( int npages, int nframes, page_fault_handle
 	char filename[256];
 
 	pt = malloc(sizeof(struct page_table));
-	if (!pt) return 0;
+	if (! pt) return 0;
 
 	the_page_table = pt;
 
 	sprintf(filename, "/tmp/pmem.%d.%d", getpid(), getuid());
 
 	pt->fd = open(filename, O_CREAT|O_TRUNC|O_RDWR, 0777);   // abre archivo con permisos de lectura, escritura y ejecución.
-	if (!pt->fd) return 0;
+	if (! pt->fd) return 0;
 
 	ftruncate(pt->fd, PAGE_SIZE*npages);    // establece el tamaño del archivo en el necesario exactamente para el disco.
 
@@ -91,11 +90,11 @@ struct page_table* page_table_create( int npages, int nframes, page_fault_handle
 
 	for (i = 0; i < pt->npages; i++) pt->page_bits[i] = 0;
 
-	sa.sa_sigaction = internal_fault_handler;
-	sa.sa_flags = SA_SIGINFO;
+	sa.sa_sigaction = internal_fault_handler;  // ??
+	sa.sa_flags = SA_SIGINFO;   // ??
 
-	sigfillset( &sa.sa_mask );
-	sigaction( SIGSEGV, &sa, 0 );
+	sigfillset( &sa.sa_mask );   // ??
+	sigaction( SIGSEGV, &sa, 0 );   // ??
 
 	return pt;
 }
@@ -127,16 +126,16 @@ void page_table_set_entry( struct page_table* pt, int page, int frame, int bits 
 	pt->page_mapping[page] = frame;
 	pt->page_bits[page] = bits;
 
-	remap_file_pages(pt->virtmem + page*PAGE_SIZE, PAGE_SIZE, 0, frame, 0);  // hace un mapeo no ordenado de las páginas (...) para ahorrar cambiar a modo Kernel
+	remap_file_pages(pt->virtmem + page*PAGE_SIZE, PAGE_SIZE, 0, frame, 0);  // hace un mapeo no ordenado de las páginas (...) para minimizar N° de cambios de contexto
 	mprotect(pt->virtmem+page*PAGE_SIZE, PAGE_SIZE, bits);    // cambia protección de la región de memoria donde se encuentra la página al nivel de protección dado por "bits".
-	/* aquí, bits puede ser: PROT_NONE (acceso nulo, a nadie),
-	                         PROT_READ (sólo lectura),
-	                         PROT_WRITE (sólo escritura),
-	                         PROT_EXEC (permisos de ejecución),
-	                         PROT_SEM (permite operaciones atómicas [...]),
-	                         PROT_SAO (acceso ordenado [...]),
-	                         PROT_GROWSUP (protección crece hacia arriba del mapa [...]),
-	                         PROT_GROWSDOWN (protección crece del inicio del mapa hacia el final [...]) */
+	/* aquí, "bits" puede ser: PROT_NONE (acceso nulo, a nadie),
+	                           PROT_READ (sólo lectura),
+	                           PROT_WRITE (sólo escritura),
+	                           PROT_EXEC (permisos de ejecución),
+	                           PROT_SEM (permite operaciones atómicas [...]),
+	                           PROT_SAO (acceso ordenado [...]),
+	                           PROT_GROWSUP (protección crece hacia arriba del mapa [...]),
+	                           PROT_GROWSDOWN (protección crece del inicio del mapa hacia el final [...]) */
 }
 
 void page_table_get_entry( struct page_table* pt, int page, int* frame, int* bits )
@@ -164,7 +163,7 @@ void page_table_print_entry( struct page_table* pt, int page )
 	printf("page %06d: frame %06d bits %c%c%c\n",
 		page,
 		pt->page_mapping[page],
-		b & PROT_READ  ? 'r' : '-',   // [??]
+		b & PROT_READ  ? 'r' : '-',   //  <==>  if (b & PROT_READ): 'r'; else: '-'
 		b & PROT_WRITE ? 'w' : '-',
 		b & PROT_EXEC  ? 'x' : '-'
 	);

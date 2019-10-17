@@ -19,7 +19,6 @@ int BLACK = 30, RED = 31, GREEN = 32, YELLOW = 33, BLUE = 34, MAGENTA = 35, PURP
 #include <signal.h>
 
 int page_fault_count = 0, page_replace_count = 0;
-int* free_frames;   // array con índices de marcos libres
 struct disk* disk;
 char* BUFFER;   // string donde se escribe-lee al disco.
 int is_physmem_FULL;  // verdadero si pt->physmem está lleno (todos los frames ocupados)
@@ -27,12 +26,43 @@ int is_physmem_FULL;  // verdadero si pt->physmem está lleno (todos los frames 
 unsigned int* tabla_marcos;  // segun Consejos
 int en_memoria; //auxiliar que marca si estamos en memoria o no
 
-int npages;
-int nframes;
-char* virtmem;
-char* physmem;
+int npages, nframes;
+char* virtmem, physmem;
 const char* policy;  // lru | fifo  (lru == rand?)
 const char* pattern;  // antes "program" = pattern1|pattern2|pattern3
+int* pages_in_PhysMem;  // contiene [índice de] páginas en memoria física. Rellena con -1s al principio.
+int pageCount_PhysMem;
+
+void replace_page( struct page_table* pt, int pageIN, const char* elalgoritmo )
+{
+	page_replace_count++;
+	
+	if (! strcmp(elalgoritmo, "fifo"))
+	{
+		int fist_page = 0;  // buscando la primera página de la tabla de páginas que 
+		for (int f = 0; f < nframes; f++)
+		{
+			if (pages_in_PhysMem[f] != -1)  // encontró primera página que se agregó a memoria
+			{
+				fist_page = pages_in_PhysMem[f];
+				// guardar página en disco y colocar pageIN en pages_in_PhysMem[f]
+				disk_write(disk, (PAGE_SIZE*fist_page)/BLOCK_SIZE, BUFFER);
+				pages_in_PhysMem[f] = pageIN;
+			}
+		}
+	}
+	if (! strcmp(elalgoritmo, "rand"))  // == "lru" en el enunciado.
+	{
+		
+	}
+	else
+	{
+		printcolor(RED, "[!] Error, algoritmo de reemplazo de página inválido. Debe ser \'fifo\' o \'rand\'\n");
+		exit(1);
+	}
+	
+}
+
 
 void page_fault_handler( struct page_table* pt, int page )
 {   /// SE GATILLA AL QUERER ACCEDER A UNA PÁGINA QUE NO ESTÁ EN MEMORIA VIRTUAL (pt->virtmem) Y HAY QUE TRAERLA DESDE EL DISCO (disk)
@@ -41,35 +71,20 @@ color_start(RED);
 	printf("page fault on page #%d\n", page);
 color_end();
 	
-	int frame, bits;
-	page_table_get_entry(pt, page, &frame, &bits); // Segun consejos --no se cae 
+	int p_frame, p_bits, p_block;
+	page_table_get_entry(pt, page, &p_frame, &p_bits);
 	strcpy(BUFFER, "");
 	
-	/* for (int i = 0; i < npages; i++)   // recorriendo tabla de páginas hasta encontrar una libre
-	{
-		page_table_get_entry(pt, i, &frame, &bits);
-		if (bits == 0)   // si es 0, no está en memoria física, creo
-		{
-			strcpy(BUFFER, "");
-			block = (PAGE_SIZE*i)/BLOCK_SIZE;  // ??
-			disk_read(disk, block, BUFFER);
-			tabla_marcos[frame] = 1;
-			
-			return;
-		}
-	} */
-	
 	for (int frameNum = 0; frameNum < nframes; frameNum++)
-	{
-		if (tabla_marcos[frameNum] == 0)  // encontró marco desocupado
+	{   // recorriendo marcos para ver si hay uno desocupado para poner la página directamente (no reemplazo de página)
+		if (tabla_marcos[frameNum] == 0)   // encontró marco desocupado
 		{
 			strcpy(BUFFER, "");
-			block = (PAGE_SIZE*i)/BLOCK_SIZE;  // ??
-			disk_read(disk, block, BUFFER);
-			
-			// [!] poner página del disco en la physmem
-			page_table_get_physmem(pt)[frameNum] = BUFFER[0];
-			
+			p_block = (PAGE_SIZE * page) / BLOCK_SIZE;
+			disk_read(disk, p_block, BUFFER);
+			page_table_get_physmem(pt)[frameNum] = BUFFER[0];  // poniendo página del disco en la physmem
+			tabla_marcos[frameNum] = 1;
+			pageCount_PhysMem++;
 			return;
 		}
 	}
@@ -78,30 +93,11 @@ color_end();
 }
 
 
-void replace_page( struct page_table* pt, int page, const char* mode )
-{
-	page_replace_count++;
-	int frameNum, frame, bits, block;
-	
-	if (! strcmp(mode, "fifo"))
-	{
-		
-	}
-	if (! strcmp(mode, "rand"))  // == "lru" en el enunciado.
-	{
-		
-	}
-	else
-	{
-		printcolor(RED, "[!] Error, política de algoritmo de reemplazo de página inválida. Debe ser \'fifo\' o \'lru\'\n");
-		exit(1);
-	}
-	
-}
-
-
 int main(int argc, char* argv[])
 {
+	pages_in_PhysMem = (int*) malloc(sizeof(int)*nframes);
+	for (int k = 0; k < nframes; k++) { pages_in_PhysMem[k] = -1; }
+	// luego, si la página i está en memoria, ocurre que pages_in_PhysMem[i] != -1
 	if (argc != 5)
 	{
 		printf("use: ./virtmem <npages> <nframes> <fifo|rand> <seq|rand|rev>\n");
@@ -125,7 +121,7 @@ int main(int argc, char* argv[])
 	struct page_table* pt = page_table_create( npages, nframes, page_fault_handler );
 	if (! pt)
 	{
-		fprintf(stderr,"couldn't create page table: %s\n",strerror(errno));
+		fprintf(stderr, "couldn't create page table: %s\n", strerror(errno));
 		return 1;
 	}
 	
@@ -149,7 +145,7 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "unknown pattern: %s\n", argv[3]);
 	}
 	
-color_start(BLUE);
+color_start(GREEN);
 	printf("[TEST] Page Table status: \n");
 	printf(" fd\t virtmem\t npages\t physmem\t nframes\t page_mapping\t page_bits\t\n");
 	//printf(" %d\t %s\t %d\t %s\t %d\t ", pt->fd, pt->virtmem, pt->npages, pt->physmem, pt->nframes);

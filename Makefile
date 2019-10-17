@@ -1,4 +1,5 @@
-FLAGS = -Wall -g
+FLAGS = 
+#-Wall -g
 # la flag -g genera una especie de reporte de error si es que lo hay (al ejecutar?)
 EXE = virtmem
 diskname = myvirtualdisk

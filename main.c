@@ -21,19 +21,21 @@ int BLACK = 30, RED = 31, GREEN = 32, YELLOW = 33, BLUE = 34, MAGENTA = 35, PURP
 int* free_frames;   // array con índices de marcos libres
 struct disk* disk;
 char* BUFFER;   // string donde se escribe-lee al disco.
-
+unsigned int*  tabla_marcos; 
 char* msj;  // auxiliar
+int en_memoria; //auxiliar que marca si estamos en memoria o no
 
 void page_fault_handler( struct page_table* pt, int page )
 {   // SE GATILLA AL QUERER ACCEDER A UNA PÁGINA QUE NO ESTÁ EN MEMORIA VIRTUAL (pt->virtmem) Y HAY QUE TRAERLA DESDE EL DISCO (disk)
 	sprintf(msj, "page fault on page #%d\n", page);
 	printcolor(RED, msj);
-	
+	// page_table_get_entry(pt, (PAGE_SIZE*page)/BLOCK_SIZE, free_frames[page], en_memoria);
+//[FJJI]Habria que setear en (pt, page, -algo- (posiblemente su frame actual) , Prot_Read) ,de ahi hacer un disk_read
 	BUFFER = malloc(sizeof(char)*40);
 	strcpy(BUFFER, "");
 	disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, BUFFER);   // verificar segundo arg
 	    // [??] Cómo sé cuál bloque del disco leer? Cómo obtengo el bloque en el que está la página "page"?
-	
+		// [FJJI]BUFER segun lo que leo debe ser &physmem[n°frame * frame_size]
 	exit(1);
 }
 
@@ -54,6 +56,7 @@ void replace_page( struct page_table* pt, int page, const char* mode )
 	}
 }
 
+
 int npages;
 int nframes;
 const char* policy;  // lru | fifo  (lru == rand?)
@@ -71,6 +74,7 @@ int main(int argc, char* argv[])
 	nframes = atoi(argv[2]);
 	policy = argv[3];
 	pattern = argv[4];
+	tabla_marcos  = malloc(sizeof(int)*npages);
 	
 	free_frames = malloc(sizeof(int)*nframes);
 	msj = malloc(sizeof(char)*300);

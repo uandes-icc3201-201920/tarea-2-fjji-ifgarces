@@ -30,7 +30,7 @@ void page_fault_handler( struct page_table* pt, int page )
 	sprintf(msj, "page fault on page #%d\n", page);
 	printcolor(RED, msj);
 	// page_table_get_entry(pt, (PAGE_SIZE*page)/BLOCK_SIZE, free_frames[page], en_memoria);
-//[FJJI]Habria que setear en (pt, page, -algo- (posiblemente su frame actual) , Prot_Read) ,de ahi hacer un disk_read
+//[FJJI]Habria que setear en (pt, page, -algo- (posiblemente su frame actual) , Prot_Read|Prot_write  (visto por los bits de proteccion, como los tomo?)  ) ,de ahi hacer un disk_read que esta abajo
 	BUFFER = malloc(sizeof(char)*40);
 	strcpy(BUFFER, "");
 	disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, BUFFER);   // verificar segundo arg

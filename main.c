@@ -68,7 +68,7 @@ color_end();
 			disk_read(disk, block, BUFFER);
 			
 			// [!] poner página del disco en la physmem
-			pt->physmem[frameNum] = BUFFER[0];
+			page_table_get_physmem(pt)[frameNum] = BUFFER[0];
 			
 			return;
 		}

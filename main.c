@@ -34,16 +34,12 @@ color_end();
 	int frame, bits;
 	page_table_get_entry(pt, page, &frame, &bits); // Segun consejos --no se cae 
 //[FJJI]Habria que setear en (pt, page, -algo- (posiblemente su frame actual) , Prot_Read|Prot_write  (visto por los bits de proteccion, como los tomo?)  ) ,de ahi hacer un disk_read que esta abajo
-	BUFFER = malloc(sizeof(char)*200);
 	strcpy(BUFFER, "");
 	disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, BUFFER);   // verificar segundo arg
 	
-	disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, &physmem[frame * nframes]);
-		// [FJJI] este debiese tener formato correcto pero tira error "bad adressing"
+	replace_page(pt, page, policy);
 	
-	    // [??] Cómo sé cuál bloque del disco leer? Cómo obtengo el bloque en el que está la página "page"?
-		// [FJJI]BUFER segun lo que leo debe ser &physmem[n°frame * frame_size]
-	
+	//disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, &physmem[frame * nframes]);	
 	
 	exit(1);
 }
@@ -51,14 +47,22 @@ color_end();
 unsigned int* tabla_marcos;  // Segun Consejos
 int en_memoria; //auxiliar que marca si estamos en memoria o no
 
-int npages;
-int nframes;
-
 void replace_page( struct page_table* pt, int page, const char* mode )
 {
+	int index, frame, bits;
+	
 	if (! strcmp(mode, "fifo"))
 	{
-		
+		for (index = 0; index < npages; index++)   // recorriendo tabla de páginas hasta encontrar una libre
+		{
+			page_table_get_entry(pt, index, &frame, &bits);
+			if (bits == 0)   // si es 0, no está en memoria física, creo
+			{
+				strcpy(BUFFER, "");
+				block = (PAGE_SIZE*index)/BLOCK_SIZE;  // ??
+				disk_read(disk, block, BUFFER);
+			}
+		}
 	}
 	if (! strcmp(mode, "rand"))  // == "lru" en el enunciado.
 	{
@@ -69,14 +73,14 @@ void replace_page( struct page_table* pt, int page, const char* mode )
 		printcolor(RED, "[!] Error, política de algoritmo de reemplazo de página inválida. Debe ser \'fifo\' o \'lru\'\n");
 		exit(1);
 	}
+	
 }
-
 
 int npages;
 int nframes;
 char* virtmem;
 char* physmem;
-const char* policy;  // lru | fifo  (lru == rand?)
+const char* policy;  // rand | fifo  (lru == rand)
 const char* pattern;  // antes "program" = pattern1|pattern2|pattern3
 
 int main(int argc, char* argv[])
@@ -92,6 +96,7 @@ int main(int argc, char* argv[])
 	policy  = argv[3];
 	pattern = argv[4];
 	tabla_marcos  = malloc(sizeof(int)*npages);
+	BUFFER = malloc(sizeof(char)*200);
 	
 	free_frames = malloc(sizeof(int)*nframes);
 	for (int k = 0; k < nframes; k++) { free_frames[k] = 0; }
@@ -129,7 +134,6 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "unknown pattern: %s\n", argv[3]);
 	}
 	
-
 color_start(BLUE);
 	printf("[TEST] Page Table status: \n");
 	printf(" fd\t virtmem\t npages\t physmem\t nframes\t page_mapping\t page_bits\t\n");
@@ -149,8 +153,10 @@ color_start(BLUE);
 	} */
 color_end();
 	
+	printf("Cantidad de faltas de página: %d\n", page_fault_count);
+	
 	page_table_delete(pt);
 	disk_close(disk);
-	
+	free(BUFFER);
 	return 0;
 }

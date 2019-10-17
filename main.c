@@ -24,6 +24,17 @@ struct disk* disk;
 char* BUFFER;   // string donde se escribe-lee al disco.
 int is_physmem_FULL;  // verdadero si pt->physmem está lleno (todos los frames ocupados)
 
+
+unsigned int* tabla_marcos;  // Segun Consejos
+int en_memoria; //auxiliar que marca si estamos en memoria o no
+
+int npages;
+int nframes;
+char* virtmem;
+char* physmem;
+const char* policy;  // lru | fifo  (lru == rand?)
+const char* pattern;  // antes "program" = pattern1|pattern2|pattern3
+
 void page_fault_handler( struct page_table* pt, int page )
 {   /// SE GATILLA AL QUERER ACCEDER A UNA PÁGINA QUE NO ESTÁ EN MEMORIA VIRTUAL (pt->virtmem) Y HAY QUE TRAERLA DESDE EL DISCO (disk)
 	page_fault_count++;
@@ -35,9 +46,14 @@ color_end();
 	page_table_get_entry(pt, page, &frame, &bits); // Segun consejos --no se cae 
 //[FJJI]Habria que setear en (pt, page, -algo- (posiblemente su frame actual) , Prot_Read|Prot_write  (visto por los bits de proteccion, como los tomo?)  ) ,de ahi hacer un disk_read que esta abajo
 	strcpy(BUFFER, "");
-	disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, BUFFER);   // verificar segundo arg
+	//disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, BUFFER);   // verificar segundo arg
 	
 	replace_page(pt, page, policy);
+	disk_read(disk, page, &physmem[tabla_marcos[frame] * sizeof(tabla_marcos)]);
+		// [FJJI] este debiese tener formato correcto pero tira error "bad adressing"
+	//disco, pagina, &physmem[marco*tamaño_pagina]
+	    // [??] Cómo sé cuál bloque del disco leer? Cómo obtengo el bloque en el que está la página "page"?
+		// [FJJI]BUFER segun lo que leo debe ser &physmem[n°frame * frame_size]
 	
 	//disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, &physmem[frame * nframes]);	
 	
@@ -71,17 +87,11 @@ void replace_page( struct page_table* pt, int page, const char* mode )
 	else
 	{
 		printcolor(RED, "[!] Error, política de algoritmo de reemplazo de página inválida. Debe ser \'fifo\' o \'lru\'\n");
-		exit(1);
+		//exit(1);
 	}
 	
 }
 
-int npages;
-int nframes;
-char* virtmem;
-char* physmem;
-const char* policy;  // rand | fifo  (lru == rand)
-const char* pattern;  // antes "program" = pattern1|pattern2|pattern3
 
 int main(int argc, char* argv[])
 {

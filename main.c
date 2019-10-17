@@ -18,14 +18,13 @@ int BLACK = 30, RED = 31, GREEN = 32, YELLOW = 33, BLUE = 34, MAGENTA = 35, PURP
 #include <errno.h>
 #include <signal.h>
 
-int page_fault_count = 0;
+int page_fault_count = 0, page_replace_count = 0;
 int* free_frames;   // array con índices de marcos libres
 struct disk* disk;
 char* BUFFER;   // string donde se escribe-lee al disco.
 int is_physmem_FULL;  // verdadero si pt->physmem está lleno (todos los frames ocupados)
 
-
-unsigned int* tabla_marcos;  // Segun Consejos
+unsigned int* tabla_marcos;  // segun Consejos
 int en_memoria; //auxiliar que marca si estamos en memoria o no
 
 int npages;
@@ -44,41 +43,49 @@ color_end();
 	
 	int frame, bits;
 	page_table_get_entry(pt, page, &frame, &bits); // Segun consejos --no se cae 
-//[FJJI]Habria que setear en (pt, page, -algo- (posiblemente su frame actual) , Prot_Read|Prot_write  (visto por los bits de proteccion, como los tomo?)  ) ,de ahi hacer un disk_read que esta abajo
 	strcpy(BUFFER, "");
-	//disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, BUFFER);   // verificar segundo arg
 	
+	/* for (int i = 0; i < npages; i++)   // recorriendo tabla de páginas hasta encontrar una libre
+	{
+		page_table_get_entry(pt, i, &frame, &bits);
+		if (bits == 0)   // si es 0, no está en memoria física, creo
+		{
+			strcpy(BUFFER, "");
+			block = (PAGE_SIZE*i)/BLOCK_SIZE;  // ??
+			disk_read(disk, block, BUFFER);
+			tabla_marcos[frame] = 1;
+			
+			return;
+		}
+	} */
+	
+	for (int frameNum = 0; frameNum < nframes; frameNum++)
+	{
+		if (tabla_marcos[frameNum] == 0)  // encontró marco desocupado
+		{
+			strcpy(BUFFER, "");
+			block = (PAGE_SIZE*i)/BLOCK_SIZE;  // ??
+			disk_read(disk, block, BUFFER);
+			
+			// [!] poner página del disco en la physmem
+			pt->physmem[frameNum] = BUFFER[0];
+			
+			return;
+		}
+	}
+	// llega aquí si ni hay ningun marco disponible
 	replace_page(pt, page, policy);
-	disk_read(disk, page, &physmem[tabla_marcos[frame] * sizeof(tabla_marcos)]);
-		// [FJJI] este debiese tener formato correcto pero tira error "bad adressing"
-	//disco, pagina, &physmem[marco*tamaño_pagina]
-	    // [??] Cómo sé cuál bloque del disco leer? Cómo obtengo el bloque en el que está la página "page"?
-		// [FJJI]BUFER segun lo que leo debe ser &physmem[n°frame * frame_size]
-	
-	//disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, &physmem[frame * nframes]);	
-	
-	exit(1);
 }
-	
-unsigned int* tabla_marcos;  // Segun Consejos
-int en_memoria; //auxiliar que marca si estamos en memoria o no
+
 
 void replace_page( struct page_table* pt, int page, const char* mode )
 {
-	int index, frame, bits;
+	page_replace_count++;
+	int frameNum, frame, bits, block;
 	
 	if (! strcmp(mode, "fifo"))
 	{
-		for (index = 0; index < npages; index++)   // recorriendo tabla de páginas hasta encontrar una libre
-		{
-			page_table_get_entry(pt, index, &frame, &bits);
-			if (bits == 0)   // si es 0, no está en memoria física, creo
-			{
-				strcpy(BUFFER, "");
-				block = (PAGE_SIZE*index)/BLOCK_SIZE;  // ??
-				disk_read(disk, block, BUFFER);
-			}
-		}
+		
 	}
 	if (! strcmp(mode, "rand"))  // == "lru" en el enunciado.
 	{
@@ -87,7 +94,7 @@ void replace_page( struct page_table* pt, int page, const char* mode )
 	else
 	{
 		printcolor(RED, "[!] Error, política de algoritmo de reemplazo de página inválida. Debe ser \'fifo\' o \'lru\'\n");
-		//exit(1);
+		exit(1);
 	}
 	
 }
@@ -105,11 +112,9 @@ int main(int argc, char* argv[])
 	nframes = atoi(argv[2]);
 	policy  = argv[3];
 	pattern = argv[4];
-	tabla_marcos  = malloc(sizeof(int)*npages);
+	tabla_marcos  = malloc(sizeof(int)*nframes);
+	for (int k = 0; k < nframes; k++) { tabla_marcos[k] = 0; }
 	BUFFER = malloc(sizeof(char)*200);
-	
-	free_frames = malloc(sizeof(int)*nframes);
-	for (int k = 0; k < nframes; k++) { free_frames[k] = 0; }
 	
 	disk = disk_open("myvirtualdisk", npages);   //struct disk* disk = disk_open("myvirtualdisk", npages);
 	if (! disk)
@@ -149,7 +154,7 @@ color_start(BLUE);
 	printf(" fd\t virtmem\t npages\t physmem\t nframes\t page_mapping\t page_bits\t\n");
 	//printf(" %d\t %s\t %d\t %s\t %d\t ", pt->fd, pt->virtmem, pt->npages, pt->physmem, pt->nframes);
 	//printf(" ??\t \'%s\'\t %d\t \'%s\'\t %d\t ??\t ??\n", virtmem, npages, physmem, nframes);
-	printf(" ??\t %s\t %d\t \'%s\'\t %d   \t ??\t ??\n", page_table_get_virtmem(pt), npages, page_table_get_physmem(pt), nframes);
+	printf(" ??\t %s\t %d\t \'%s\'\t %d   \t ??\t ??\n", "<protected>", npages, page_table_get_physmem(pt), nframes);
 	
 	/* unsigned int k;
 	for (k = 0; k < sizeof(pt->page_mapping)/sizeof(int); k++)
@@ -164,6 +169,7 @@ color_start(BLUE);
 color_end();
 	
 	printf("Cantidad de faltas de página: %d\n", page_fault_count);
+	printf("Cantidad de reemplazos de página %d\n", page_replace_count);
 	
 	page_table_delete(pt);
 	disk_close(disk);

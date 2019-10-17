@@ -21,17 +21,20 @@ int BLACK = 30, RED = 31, GREEN = 32, YELLOW = 33, BLUE = 34, MAGENTA = 35, PURP
 int* free_frames;   // array con índices de marcos libres
 struct disk* disk;
 char* BUFFER;   // string donde se escribe-lee al disco.
-
-char* msj;  // auxiliar
+int is_physmem_FULL;  // verdadero si pt->physmem está lleno (todos los frames ocupados)
 
 void page_fault_handler( struct page_table* pt, int page )
-{   // SE GATILLA AL QUERER ACCEDER A UNA PÁGINA QUE NO ESTÁ EN MEMORIA VIRTUAL (pt->virtmem) Y HAY QUE TRAERLA DESDE EL DISCO (disk)
-	sprintf(msj, "page fault on page #%d\n", page);
-	printcolor(RED, msj);
+{   // SE GATILLA AL QUERER ACCEDER A UNA PÁGINA QUE NO ESTÁ EN MEMORIA VIRTUAL (pt->virtmem) Y HAY QUE TRAERLA DESDE EL DISCO (disk), CIERTO?
+color_start(RED);
+	printf("page fault on page #%d\n", page);   //sprintf(msj, "page fault on page #%d\n", page); printcolor(RED, msj);
+color_end();
 	
-	BUFFER = malloc(sizeof(char)*40);
+	BUFFER = malloc(sizeof(char)*100);
 	strcpy(BUFFER, "");
-	disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, BUFFER);   // verificar segundo arg
+	
+	
+	
+	//disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, BUFFER);   // verificar segundo arg
 	    // [??] Cómo sé cuál bloque del disco leer? Cómo obtengo el bloque en el que está la página "page"?
 	
 	exit(1);
@@ -43,7 +46,7 @@ void replace_page( struct page_table* pt, int page, const char* mode )
 	{
 		
 	}
-	if (! strcmp(mode, "lru"))
+	if (! strcmp(mode, "rand"))  // == "lru" en el enunciado.
 	{
 		
 	}
@@ -67,13 +70,13 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 	
-	npages = atoi(argv[1]);
+	npages  = atoi(argv[1]);
 	nframes = atoi(argv[2]);
-	policy = argv[3];
+	policy  = argv[3];
 	pattern = argv[4];
 	
 	free_frames = malloc(sizeof(int)*nframes);
-	msj = malloc(sizeof(char)*300);
+	for (int k = 0; k < nframes; k++) { free_frames[k] = 0; }
 	
 	disk = disk_open("myvirtualdisk", npages);   //struct disk* disk = disk_open("myvirtualdisk", npages);
 	if (! disk)
@@ -90,21 +93,18 @@ int main(int argc, char* argv[])
 	
 	char* virtmem = page_table_get_virtmem(pt);
 	char* physmem = page_table_get_physmem(pt);
-	if (! strcmp(pattern, "pattern1"))
+	if (! strcmp(pattern, "seq"))        // sequential
 	{
 		access_pattern1(virtmem, npages*PAGE_SIZE);
 	}
-	
-	else if (! strcmp(pattern, "pattern2"))
+	else if (! strcmp(pattern, "rand"))  // random
 	{
 		access_pattern2(virtmem, npages*PAGE_SIZE);
 	}
-	
-	else if (! strcmp(pattern, "pattern3"))
+	else if (! strcmp(pattern, "rev"))   // reverse
 	{
 		access_pattern3(virtmem, npages*PAGE_SIZE);
 	}
-	
 	else
 	{
 		fprintf(stderr, "unknown pattern: %s\n", argv[3]);
@@ -116,7 +116,7 @@ color_start(BLUE);
 	printf(" fd\t virtmem\t npages\t physmem\t nframes\t page_mapping\t page_bits\t\n");
 	//printf(" %d\t %s\t %d\t %s\t %d\t ", pt->fd, pt->virtmem, pt->npages, pt->physmem, pt->nframes);
 	//printf(" ??\t \'%s\'\t %d\t \'%s\'\t %d\t ??\t ??\n", virtmem, npages, physmem, nframes);
-	printf(" ??\t <protected>\t %d\t \'%s\'\t %d   \t ??\t ??\n", npages, physmem, nframes);
+	printf(" ??\t %s\t %d\t \'%s\'\t %d   \t ??\t ??\n", page_table_get_virtmem(pt), npages, page_table_get_physmem(pt), nframes);
 	
 	/* unsigned int k;
 	for (k = 0; k < sizeof(pt->page_mapping)/sizeof(int); k++)
@@ -129,9 +129,9 @@ color_start(BLUE);
 		printf("%d,", pt->page_bits[k]);
 	} */
 color_end();
-
+	
 	page_table_delete(pt);
 	disk_close(disk);
-
+	
 	return 0;
 }

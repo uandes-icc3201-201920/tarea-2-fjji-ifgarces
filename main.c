@@ -18,53 +18,41 @@ int BLACK = 30, RED = 31, GREEN = 32, YELLOW = 33, BLUE = 34, MAGENTA = 35, PURP
 #include <errno.h>
 #include <signal.h>
 
+int page_fault_count = 0;
 int* free_frames;   // array con índices de marcos libres
 struct disk* disk;
 char* BUFFER;   // string donde se escribe-lee al disco.
-<<<<<<< HEAD
 int is_physmem_FULL;  // verdadero si pt->physmem está lleno (todos los frames ocupados)
 
 void page_fault_handler( struct page_table* pt, int page )
-{   // SE GATILLA AL QUERER ACCEDER A UNA PÁGINA QUE NO ESTÁ EN MEMORIA VIRTUAL (pt->virtmem) Y HAY QUE TRAERLA DESDE EL DISCO (disk), CIERTO?
+{   /// SE GATILLA AL QUERER ACCEDER A UNA PÁGINA QUE NO ESTÁ EN MEMORIA VIRTUAL (pt->virtmem) Y HAY QUE TRAERLA DESDE EL DISCO (disk)
+	page_fault_count++;
 color_start(RED);
-	printf("page fault on page #%d\n", page);   //sprintf(msj, "page fault on page #%d\n", page); printcolor(RED, msj);
+	printf("page fault on page #%d\n", page);
 color_end();
 	
-	BUFFER = malloc(sizeof(char)*100);
+	int frame, bits;
+	page_table_get_entry(pt, page, &frame, &bits); // Segun consejos --no se cae 
+//[FJJI]Habria que setear en (pt, page, -algo- (posiblemente su frame actual) , Prot_Read|Prot_write  (visto por los bits de proteccion, como los tomo?)  ) ,de ahi hacer un disk_read que esta abajo
+	BUFFER = malloc(sizeof(char)*200);
 	strcpy(BUFFER, "");
+	disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, BUFFER);   // verificar segundo arg
+	
+	disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, &physmem[frame * nframes]);
+		// [FJJI] este debiese tener formato correcto pero tira error "bad adressing"
+	
+	    // [??] Cómo sé cuál bloque del disco leer? Cómo obtengo el bloque en el que está la página "page"?
+		// [FJJI]BUFER segun lo que leo debe ser &physmem[n°frame * frame_size]
 	
 	
+	exit(1);
+}
 	
-	//disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, BUFFER);   // verificar segundo arg
-=======
-unsigned int*  tabla_marcos;  //Segun Consejos
-char* msj;  // auxiliar
+unsigned int* tabla_marcos;  // Segun Consejos
 int en_memoria; //auxiliar que marca si estamos en memoria o no
 
 int npages;
 int nframes;
-char* virtmem;
-char* physmem;
-// [FJJI] subi las declaraciones por que nos pueden servir para  la funcion a continuacion
-
-void page_fault_handler( struct page_table* pt, int page )
-{   // SE GATILLA AL QUERER ACCEDER A UNA PÁGINA QUE NO ESTÁ EN MEMORIA VIRTUAL (pt->virtmem) Y HAY QUE TRAERLA DESDE EL DISCO (disk)
-	sprintf(msj, "page fault on page #%d\n", page);
-	printcolor(RED, msj);
-	int frame, bits;
-	page_table_get_entry(pt, page, &frame, &bits); // Segun consejos --no se cae 
-//[FJJI]Habria que setear en (pt, page, -algo- (posiblemente su frame actual) , Prot_Read|Prot_write  (visto por los bits de proteccion, como los tomo?)  ) ,de ahi hacer un disk_read que esta abajo
-	BUFFER = malloc(sizeof(char)*40);
-	strcpy(BUFFER, "");
-	int the_frame= &frame;
-	//disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, &physmem[the_frame * nframes]); 
-		// [FJJI] este debiese tener formato correcto pero tira error "bad adressing"
-	disk_read(disk, (PAGE_SIZE*page)/BLOCK_SIZE, BUFFER);   // verificar segundo arg
->>>>>>> e45f3b47ecacc0c6355ac2646c9cc2967e924eb1
-	    // [??] Cómo sé cuál bloque del disco leer? Cómo obtengo el bloque en el que está la página "page"?
-		// [FJJI]BUFER segun lo que leo debe ser &physmem[n°frame * frame_size]
-	exit(1);
-}
 
 void replace_page( struct page_table* pt, int page, const char* mode )
 {
@@ -86,6 +74,8 @@ void replace_page( struct page_table* pt, int page, const char* mode )
 
 int npages;
 int nframes;
+char* virtmem;
+char* physmem;
 const char* policy;  // lru | fifo  (lru == rand?)
 const char* pattern;  // antes "program" = pattern1|pattern2|pattern3
 
@@ -93,7 +83,7 @@ int main(int argc, char* argv[])
 {
 	if (argc != 5)
 	{
-		printf("use: ./virtmem <npages> <nframes> <lru|fifo> <pattern1|pattern2|pattern3>\n");
+		printf("use: ./virtmem <npages> <nframes> <fifo|rand> <seq|rand|rev>\n");
 		return 1;
 	}
 	
@@ -119,15 +109,10 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 	
-<<<<<<< HEAD
-	char* virtmem = page_table_get_virtmem(pt);
-	char* physmem = page_table_get_physmem(pt);
-	if (! strcmp(pattern, "seq"))        // sequential
-=======
 	virtmem = page_table_get_virtmem(pt);
 	physmem = page_table_get_physmem(pt);
-	if (! strcmp(pattern, "pattern1"))
->>>>>>> e45f3b47ecacc0c6355ac2646c9cc2967e924eb1
+
+	if (! strcmp(pattern, "seq"))        // sequential
 	{
 		access_pattern1(virtmem, npages*PAGE_SIZE);
 	}

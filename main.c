@@ -50,7 +50,7 @@ void replace_page( struct page_table* pt, int pageIN, const char* elalgoritmo )
 		int first_page = 0;  // buscando la primera página de la tabla de páginas que 
 		for (int f = nframes; f >= 0; f--)
 		{
-			if (physical_memory.Pages[f] != -1)  // encontró primer frame en memoria ocupado con una página (FIRST)
+			if (physical_memory.Pages[f] != -1)  // encontró primer frame en memoria ocupado con una página
 			{
 				first_page = physical_memory.Pages[f];
 				// ahora guardar página en disco y colocar pageIN en physmem
@@ -59,7 +59,9 @@ void replace_page( struct page_table* pt, int pageIN, const char* elalgoritmo )
 				disk_write(disk, (PAGE_SIZE*first_page)/BLOCK_SIZE, _aux);
 				
 				physmem[f] = (char)pageIN;
-				physical_memory.Pages[f] = pageIN;  // (FIRST OUT)
+				physical_memory.Pages[f] = pageIN;
+				page_table_set_entry(pt, first_page, f, 0);
+				return;
 			}
 		}
 	}
@@ -78,6 +80,7 @@ void replace_page( struct page_table* pt, int pageIN, const char* elalgoritmo )
 				
 				physmem[my_page] = (char)pageIN;
 				physical_memory.Pages[my_page] = pageIN;  // (FIRST OUT)
+				page_table_set_entry(pt, my_page, random_f, 0);
 				return;
 			}
 			

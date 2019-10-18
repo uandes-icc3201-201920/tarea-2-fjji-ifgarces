@@ -11,7 +11,7 @@ Make all of your changes to main.c instead.
 #include <stdlib.h>
 
 int random_num;
-
+/*
 static int compare_bytes( const void* pa, const void* pb )
 {
 	int a = *(char*)pa;
@@ -30,7 +30,7 @@ static int compare_bytes( const void* pa, const void* pb )
 		return 1;
 	}
 }
-
+*/
 void access_pattern1( char* data, int length )
 {
 	/// acceso secuencial

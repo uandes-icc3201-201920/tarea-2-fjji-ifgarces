@@ -52,8 +52,13 @@ void access_pattern2( char* data, int length )
 	}
 }
 
-void access_pattern3( char* cdata, int length )
+void access_pattern3( char* data, int length )
 {
 	/// acceso al revés, o algo.
-	printf("pattern3 does nothing for now.");
+	//printf("pattern3 does nothing for now.");
+	
+	for (int k = length-1; k >= 0; k--)
+	{
+		data[k] = 7;
+	}
 }

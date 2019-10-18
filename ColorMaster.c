@@ -34,7 +34,7 @@ void printcolor_charasterisco(int colorcode, char* text)
 
 
 /// forma de uso:
-///		> color_start(CYAN); printf("mensaje con printf en %s", "color \'cián\'"); color_end()
+///		> color_start(CYAN); printf("mensaje con printf en %s\n", "color \'cián\'"); color_end()
 void color_start(int colorcode)
 {
 	assert((colorcode >= 30) && (colorcode <= 37));
@@ -46,5 +46,5 @@ void color_start(int colorcode)
 
 void color_end()
 {
-	printf(" \033[0m");
+	printf("\033[0m");
 }

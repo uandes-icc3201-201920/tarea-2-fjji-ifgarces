@@ -19,7 +19,6 @@ int BLACK = 30, RED = 31, GREEN = 32, YELLOW = 33, BLUE = 34, MAGENTA = 35, PURP
 #include <signal.h>
 
 int page_fault_count = 0, page_replace_count = 0;
-int* free_frames;   // array con índices de marcos libres
 struct disk* disk;
 char* BUFFER;   // string donde se escribe-lee al disco.
 int is_physmem_FULL;  // verdadero si pt->physmem está lleno (todos los frames ocupados)
@@ -27,15 +26,16 @@ int is_physmem_FULL;  // verdadero si pt->physmem está lleno (todos los frames 
 unsigned int* tabla_marcos;  // segun Consejos
 int en_memoria; //auxiliar que marca si estamos en memoria o no
 
-int frame, bits;
 
-int npages;
-int nframes;
+int frame, bits;
+int npages, nframes;
+
 char* virtmem;
 char* physmem;
 const char* policy;  // lru | fifo  (lru == rand?)
 const char* pattern;  // antes "program" = pattern1|pattern2|pattern3
 
+/*
 
 void replace_fifo(struct page_table* pt, int page){
 
@@ -44,29 +44,65 @@ void replace_fifo(struct page_table* pt, int page){
 void replace_rand(struct page_table* pt, int page){
 
 }
+*/
+struct PhysMem_data
+{
+	int* Pages;  // contiene [índice de] páginas en memoria física. Rellena con -1s al principio.
+	int PageCount;  // cantidad de páginas en memoria física.
+} physical_memory;
 
-void replace_page( struct page_table* pt, int page, const char* mode )
+void replace_page( struct page_table* pt, int pageIN, const char* elalgoritmo )
 {
 	page_replace_count++;
-	//int frameNum, frame, bits, block;
 	
-	if (! strcmp(mode, "fifo"))
+	if (! strcmp(elalgoritmo, "fifo"))
 	{
-		printcolor(RED, "[!]");
-		replace_fifo(pt,page);
+		int first_page = 0;  // buscando la primera página de la tabla de páginas que 
+		for (int f = 0; f < nframes; f++)
+		{
+			if (physical_memory.Pages[f] != -1)  // encontró primer frame en memoria ocupado con una página (FIRST)
+			{
+				first_page = physical_memory.Pages[f];
+				// ahora guardar página en disco y colocar pageIN en physmem
+				sprintf(BUFFER, "%c", page_table_get_physmem(pt)[first_page*PAGE_SIZE]);  // usando esta vez BUFFER como auxiliar de forma distinta
+				const char* _aux = BUFFER;
+				disk_write(disk, (PAGE_SIZE*first_page)/BLOCK_SIZE, _aux);
+				
+				physmem[f] = (char)pageIN;
+				physical_memory.Pages[f] = pageIN;  // (FIRST OUT)
+			}
+		}
 	}
-	if (! strcmp(mode, "rand"))  // == "lru" en el enunciado.
+	if (! strcmp(elalgoritmo, "rand"))  // == "lru" en el enunciado.
 	{
-		printcolor(RED, "[!]");
-		replace_rand(pt,page);
+		int iterations, random_f, my_page;
+		while (1)
+		{
+			random_f = rand()%nframes;
+			if (physical_memory.Pages[random_f] != -1)   // cuando encuentra frame con una página, no vacío
+			{
+				my_page = physical_memory.Pages[random_f];
+				sprintf(BUFFER, "%c", physmem[random_f*PAGE_SIZE]);  // usando esta vez BUFFER como auxiliar de forma distinta
+				const char* _aux = BUFFER;
+				disk_write(disk, (PAGE_SIZE*random_f)/BLOCK_SIZE, _aux);
+				
+				physmem[random_f] = (char)pageIN;
+				physical_memory.Pages[random_f] = pageIN;  // (FIRST OUT)
+				return;
+			}
+			
+			if (iterations == 20000) { printf("[!] Error: se quedó pegado en función replace_page.\n"); exit(1); }
+			iterations++;
+		}
 	}
 	else
 	{
-		printcolor(RED, "[!] Error, política de algoritmo de reemplazo de página inválida. Debe ser \'fifo\' o \'lru\'\n");
+		printcolor(RED, "[!] Error, algoritmo de reemplazo de página inválido. Debe ser \'fifo\' o \'rand\'\n");
 		exit(1);
 	}
 	
 }
+
 
 void page_fault_handler( struct page_table* pt, int page )
 {   /// SE GATILLA AL QUERER ACCEDER A UNA PÁGINA QUE NO ESTÁ EN MEMORIA VIRTUAL (pt->virtmem) Y HAY QUE TRAERLA DESDE EL DISCO (disk)
@@ -74,37 +110,20 @@ void page_fault_handler( struct page_table* pt, int page )
 color_start(RED);
 	printf("page fault on page #%d\n", page);
 color_end();
-	
-	page_table_get_entry(pt, page, &frame, &bits); // Segun consejos --no se cae 
-	//page_table_set_entry(pt, page, &frame, &bits);
-	page_table_print_entry( pt, page );
+	//page_table_set_entry(pt, page, &frame, &bits); //maybe
+	int p_frame, p_bits, p_block;
+	page_table_get_entry(pt, page, &p_frame, &p_bits);
 	strcpy(BUFFER, "");
-	
-	/* for (int i = 0; i < npages; i++)   // recorriendo tabla de páginas hasta encontrar una libre
-	{
-		page_table_get_entry(pt, i, &frame, &bits);
-		if (bits == 0)   // si es 0, no está en memoria física, creo
-		{
-			strcpy(BUFFER, "");
-			block = (PAGE_SIZE*i)/BLOCK_SIZE;  // ??
-			disk_read(disk, block, BUFFER);
-			tabla_marcos[frame] = 1;
-			
-			return;
-		}
-	} */
-	
 	for (int frameNum = 0; frameNum < nframes; frameNum++)
-	{
-		if (tabla_marcos[frameNum] == 0)  // encontró marco desocupado
+	{   // recorriendo marcos para ver si hay uno desocupado para poner la página directamente (no reemplazo de página)
+		if (tabla_marcos[frameNum] == 0)   // encontró marco desocupado
 		{
 			strcpy(BUFFER, "");
-			int block = (PAGE_SIZE*frameNum)/BLOCK_SIZE;  // ??
-			disk_read(disk, block, BUFFER);
-			
-			// [!] poner página del disco en la physmem
-			page_table_get_physmem(pt)[frameNum] = BUFFER[0];
-			
+			p_block = (PAGE_SIZE * page) / BLOCK_SIZE;
+			disk_read(disk, p_block, BUFFER);
+			physmem[frameNum*PAGE_SIZE] = BUFFER[0];  // poniendo página del disco en la physmem
+			tabla_marcos[frameNum] = 1;
+			physical_memory.PageCount++;
 			return;
 		}
 	}
@@ -115,9 +134,12 @@ color_end();
 
 int main(int argc, char* argv[])
 {
+	physical_memory.Pages = (int*) malloc(sizeof(int)*nframes);
+	for (int k = 0; k < nframes; k++) { physical_memory.Pages[k] = -1; }
+	// luego, si la página i está en memoria, ocurre que pages_in_PhysMem[i] != -1
 	if (argc != 5)
 	{
-		printf("use: ./virtmem <npages> <nframes> <fifo|rand> <seq|rand|rev>\n");
+		printf("use: ./virtmem <npages> <nframes> fifo|rand seq|rand|rev\n");
 		return 1;
 	}
 	
@@ -129,6 +151,11 @@ int main(int argc, char* argv[])
 	for (int k = 0; k < nframes; k++) { tabla_marcos[k] = 0; }
 	BUFFER = malloc(sizeof(char)*200);
 	
+	printf("Cantidad de páginas: %d\n", npages);
+	printf("Cantidad de marcos: %d\n", nframes);
+	printf("Algoritmo de reemplazo de página: %s\n", policy);
+	printf("Patrón de acceso a memoria: %s\n", pattern);
+	
 	disk = disk_open("myvirtualdisk", npages);   //struct disk* disk = disk_open("myvirtualdisk", npages);
 	if (! disk)
 	{
@@ -138,12 +165,13 @@ int main(int argc, char* argv[])
 	struct page_table* pt = page_table_create( npages, nframes, page_fault_handler );
 	if (! pt)
 	{
-		fprintf(stderr,"couldn't create page table: %s\n",strerror(errno));
+		fprintf(stderr, "couldn't create page table: %s\n", strerror(errno));
 		return 1;
 	}
 	
 	virtmem = page_table_get_virtmem(pt);
-	physmem = page_table_get_physmem(pt);
+	physmem = (char*) malloc(sizeof(char)*5000);
+	physmem = page_table_get_physmem(pt);  // [!!!] por qué da warning??? dice que es un integer??? wtf??? ya no hay warning si le pongo malloc, aunque parece que eso causa en algún punto segmentation fault.
 
 	if (! strcmp(pattern, "seq"))        // sequential
 	{
@@ -160,31 +188,15 @@ int main(int argc, char* argv[])
 	else
 	{
 		fprintf(stderr, "unknown pattern: %s\n", argv[3]);
+		exit(1);
 	}
 	
-color_start(BLUE);
+/* color_start(BLUE);
 	printf("[TEST] Page Table status: \n");
 	printf(" fd\t virtmem\t npages\t physmem\t nframes\t page_mapping\t page_bits\t\n");
-	//printf(" %d\t %s\t %d\t %s\t %d\t ", pt->fd, pt->virtmem, pt->npages, pt->physmem, pt->nframes);
-	//printf(" ??\t \'%s\'\t %d\t \'%s\'\t %d\t ??\t ??\n", virtmem, npages, physmem, nframes);
-	printf(" ??\t %s\t %d\t \'%s\'\t %d   \t ??\t ??\n", "<protected>", npages, page_table_get_physmem(pt), nframes);
-	
-	/* unsigned int k;
-	for (k = 0; k < sizeof(pt->page_mapping)/sizeof(int); k++)
-	{
-		printf("%d,", pt->page_mapping[k]);
-	}
-	printf("\t ");
-	for (k = 0; k < sizeof(pt->page_bits)/sizeof(int); k++)
-	{
-		printf("%d,", pt->page_bits[k]);
-	} */
-color_end();
 
-color_start(GREEN);
-	//page_table_get_entry(pt, page, &frame, &bits);
-	//page_table_print_entry( pt, page );
-	color_end();
+	printf(" ??\t %s\t %d\t \'%s\'\t %d   \t ??\t ??\n", "<protected>", npages, physmem, nframes);
+color_end(); */
 	
 	printf("Cantidad de faltas de página: %d\n", page_fault_count);
 	printf("Cantidad de reemplazos de página %d\n", page_replace_count);
@@ -192,5 +204,8 @@ color_start(GREEN);
 	page_table_delete(pt);
 	disk_close(disk);
 	free(BUFFER);
+	free(physmem);
+	free(physical_memory.Pages);
+	free(tabla_marcos);
 	return 0;
 }

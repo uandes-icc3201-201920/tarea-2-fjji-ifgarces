@@ -35,16 +35,6 @@ char* physmem;
 const char* policy;  // lru | fifo  (lru == rand?)
 const char* pattern;  // antes "program" = pattern1|pattern2|pattern3
 
-/*
-
-void replace_fifo(struct page_table* pt, int page){
-
-}
-
-void replace_rand(struct page_table* pt, int page){
-
-}
-*/
 struct PhysMem_data
 {
 	int* Pages;  // contiene [índice de] páginas en memoria física. Rellena con -1s al principio.

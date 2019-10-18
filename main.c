@@ -14,6 +14,7 @@ how to use the page table and disk interfaces.
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <time.h>
 #include <signal.h>
 
 int npages, nframes; //los totales
@@ -54,7 +55,7 @@ void FIFO_mode(struct page_table *pt,int page,int frame,int bits){
 		disk_read(disk,page,&physmem[fifo_entradas[recien]*PAGE_SIZE]);
 		fifo_entradas[primer] = fifo_entradas[recien];//dejamos al primer a eliminar con los datos del recien ingresado
 		primer ++;
-		primer = primer % nframes;
+		primer = primer % nframes; //no pasarse
 		tabla_marcos[fifo_entradas[recien]] = page;
 		bit_tabla_marcos[fifo_entradas[recien]] = bits;//seteamos la tabla
 		page_table_set_entry(pt,page,fifo_entradas[recien],bits);//lo pasamos a pt
@@ -70,8 +71,36 @@ void FIFO_mode(struct page_table *pt,int page,int frame,int bits){
 	}
 }
 void RAND_mode(struct page_table *pt,int page,int frame,int bits){
-	printf("no");
-	exit(-1);
+	srand(time(NULL)); 
+	int random_f = rand() % nframes;
+	int queda_frame	= -1; //partimos diciendo que no quedan frames
+	for (int f=0;f<=nframes;f++){//recorremos los frames
+		if (bit_tabla_marcos[f]==0){//si hay un frame disponible
+			queda_frame = f;//queda_frame es el frame que encontramos libre
+			break;
+		}
+	}
+	if (queda_frame==-1){//si no encontramos un frame
+		bits = PROT_READ;
+		escrituras_realizadas ++;
+		disk_write(disk,tabla_marcos[random_f],&physmem[random_f*PAGE_SIZE]);
+		page_table_set_entry(pt,tabla_marcos[random_f],random_f,0); //vaciamos la pagina para llenarla
+		lecturas_realizadas	++;
+		disk_read(disk,page,&physmem[random_f*PAGE_SIZE]);
+		tabla_marcos[random_f] = page;
+		bit_tabla_marcos[random_f] = bits;//seteamos la tabla
+		page_table_set_entry(pt,page,random_f,bits);//lo pasamos a pt
+	
+	}
+	else{//encontramos frame para usar
+		lecturas_realizadas	++;
+		bits = PROT_READ;//proteccion de lectura mode on
+		disk_read(disk, page, &physmem[queda_frame*PAGE_SIZE]);
+		tabla_marcos[frame] = page;
+		bit_tabla_marcos[frame] = bits;//seteamos la tabla
+		page_table_set_entry(pt,page,queda_frame,bits);//lo pasamos a pt
+		
+	}
 }
 
 void page_fault_handler( struct page_table *pt, int page )

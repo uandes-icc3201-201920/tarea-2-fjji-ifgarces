@@ -30,8 +30,12 @@ int npages, nframes;
 char* virtmem, physmem;
 const char* policy;  // lru | fifo  (lru == rand?)
 const char* pattern;  // antes "program" = pattern1|pattern2|pattern3
-int* pages_in_PhysMem;  // contiene [índice de] páginas en memoria física. Rellena con -1s al principio.
-int pageCount_PhysMem;
+
+struct PhysMem_data
+{
+	int* Pages;  // contiene [índice de] páginas en memoria física. Rellena con -1s al principio.
+	int PageCount;  // cantidad de páginas en memoria física.
+} physical_memory;
 
 void replace_page( struct page_table* pt, int pageIN, const char* elalgoritmo )
 {
@@ -42,12 +46,13 @@ void replace_page( struct page_table* pt, int pageIN, const char* elalgoritmo )
 		int fist_page = 0;  // buscando la primera página de la tabla de páginas que 
 		for (int f = 0; f < nframes; f++)
 		{
-			if (pages_in_PhysMem[f] != -1)  // encontró primera página que se agregó a memoria
+			if (physical_memory.Pages[f] != -1)  // encontró primera página que se agregó a memoria
 			{
-				fist_page = pages_in_PhysMem[f];
-				// guardar página en disco y colocar pageIN en pages_in_PhysMem[f]
-				disk_write(disk, (PAGE_SIZE*fist_page)/BLOCK_SIZE, BUFFER);
-				pages_in_PhysMem[f] = pageIN;
+				fist_page = physical_memory.Pages[f];
+				// guardar página en disco y colocar pageIN en physmem
+				disk_write(disk, (PAGE_SIZE*fist_page)/BLOCK_SIZE, (char*)fist_page);
+				page_table_get_physmem(pt)[f] = (char*)pageIN;
+				physical_memory.Pages[f] = pageIN;
 			}
 		}
 	}
@@ -82,9 +87,9 @@ color_end();
 			strcpy(BUFFER, "");
 			p_block = (PAGE_SIZE * page) / BLOCK_SIZE;
 			disk_read(disk, p_block, BUFFER);
-			page_table_get_physmem(pt)[frameNum] = BUFFER[0];  // poniendo página del disco en la physmem
+			page_table_get_physmem(pt)[frameNum*PAGE_SIZE] = BUFFER[0];  // poniendo página del disco en la physmem
 			tabla_marcos[frameNum] = 1;
-			pageCount_PhysMem++;
+			physical_memory.PageCount++;
 			return;
 		}
 	}
@@ -95,8 +100,8 @@ color_end();
 
 int main(int argc, char* argv[])
 {
-	pages_in_PhysMem = (int*) malloc(sizeof(int)*nframes);
-	for (int k = 0; k < nframes; k++) { pages_in_PhysMem[k] = -1; }
+	physical_memory.Pages = (int*) malloc(sizeof(int)*nframes);
+	for (int k = 0; k < nframes; k++) { physical_memory.Pages = -1; }
 	// luego, si la página i está en memoria, ocurre que pages_in_PhysMem[i] != -1
 	if (argc != 5)
 	{

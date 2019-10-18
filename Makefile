@@ -5,7 +5,7 @@ EXE = virtmem
 diskname = myvirtualdisk
 CC = gcc
 
-$(EXE): *.o *.c Makefile clean ReDraw
+$(EXE): *.c *.h Makefile clean ReDraw
 	$(CC) -o colormaster.o ColorMaster.c -c $(FLAGS)
 	$(CC) -o page_table.o page_table.c -c $(FLAGS)
 	$(CC) -o disk.o disk.c -c $(FLAGS)

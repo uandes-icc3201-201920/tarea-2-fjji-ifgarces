@@ -20,7 +20,8 @@ clean:
 	rm -f $(EXE) *.o *.tar.gz $(diskname)
 
 run:
-	./$(EXE) 50 20 fifo pattern1
+	# ./virtmem <npages> <nframes> fifo|rand seq|rand|rev
+	./$(EXE) 50 20 fifo seq
 
 compress:
 	tar -zcvf TAREA2_fjji_ifgarces.tar.gz Makefile *.c *.h README.md informe-t2.pdf

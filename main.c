@@ -58,7 +58,7 @@ void replace_page( struct page_table* pt, int pageIN, const char* elalgoritmo )
 	if (! strcmp(elalgoritmo, "fifo"))
 	{
 		int first_page = 0;  // buscando la primera página de la tabla de páginas que 
-		for (int f = 0; f < nframes; f++)
+		for (int f = nframes; f >= 0; f--)
 		{
 			if (physical_memory.Pages[f] != -1)  // encontró primer frame en memoria ocupado con una página (FIRST)
 			{
@@ -76,18 +76,18 @@ void replace_page( struct page_table* pt, int pageIN, const char* elalgoritmo )
 	if (! strcmp(elalgoritmo, "rand"))  // == "lru" en el enunciado.
 	{
 		int iterations, random_f, my_page;
-		while (1)
+		while (1)  // bucle hasta que encuentra frame ocupado con una página
 		{
 			random_f = rand()%nframes;
 			if (physical_memory.Pages[random_f] != -1)   // cuando encuentra frame con una página, no vacío
 			{
 				my_page = physical_memory.Pages[random_f];
-				sprintf(BUFFER, "%c", physmem[random_f*PAGE_SIZE]);  // usando esta vez BUFFER como auxiliar de forma distinta
+				sprintf(BUFFER, "%c", physmem[my_page*PAGE_SIZE]);  // usando esta vez BUFFER como auxiliar de forma distinta
 				const char* _aux = BUFFER;
-				disk_write(disk, (PAGE_SIZE*random_f)/BLOCK_SIZE, _aux);
+				disk_write(disk, (PAGE_SIZE*my_page)/BLOCK_SIZE, _aux);
 				
-				physmem[random_f] = (char)pageIN;
-				physical_memory.Pages[random_f] = pageIN;  // (FIRST OUT)
+				physmem[my_page] = (char)pageIN;
+				physical_memory.Pages[my_page] = pageIN;  // (FIRST OUT)
 				return;
 			}
 			

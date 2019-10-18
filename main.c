@@ -21,10 +21,9 @@ int BLACK = 30, RED = 31, GREEN = 32, YELLOW = 33, BLUE = 34, MAGENTA = 35, PURP
 int page_fault_count = 0, page_replace_count = 0;
 struct disk* disk;
 char* BUFFER;   // string donde se escribe-lee al disco.
-int is_physmem_FULL;  // verdadero si pt->physmem está lleno (todos los frames ocupados)
 
-unsigned int* tabla_marcos;  // segun Consejos
-int en_memoria; //auxiliar que marca si estamos en memoria o no
+int* tabla_marcos;  // segun Consejos
+// int en_memoria;  [sin usar] //auxiliar que marca si estamos en memoria o no
 
 
 int frame, bits;
@@ -79,12 +78,12 @@ void replace_page( struct page_table* pt, int pageIN, const char* elalgoritmo )
 				disk_write(disk, (PAGE_SIZE*my_page)/BLOCK_SIZE, _aux);
 				
 				physmem[my_page] = (char)pageIN;
-				physical_memory.Pages[my_page] = pageIN;  // (FIRST OUT)
+				physical_memory.Pages[my_page] = pageIN;
 				page_table_set_entry(pt, my_page, random_f, 0);
 				return;
 			}
 			
-			if (iterations == 20000) { printf("[!] Error: se quedó pegado en función replace_page.\n"); exit(1); }
+			if (iterations == 999999) { printf("[!] Error: se quedó pegado en función replace_page. (~ 1M iteraciones)\n"); exit(1); }
 			iterations++;
 		}
 	}
@@ -109,8 +108,9 @@ color_end();
 	strcpy(BUFFER, "");
 	for (int frameNum = 0; frameNum < nframes; frameNum++)
 	{   // recorriendo marcos para ver si hay uno desocupado para poner la página directamente (no reemplazo de página)
-		if (tabla_marcos[frameNum] == 0)   // encontró marco desocupado
+		if (tabla_marcos[frameNum] == -1)   // encontró marco desocupado
 		{
+			//printf("[test] FOUND FREE FRAME\n");
 			strcpy(BUFFER, "");
 			p_block = (PAGE_SIZE * page) / BLOCK_SIZE;
 			disk_read(disk, p_block, BUFFER);
@@ -127,9 +127,6 @@ color_end();
 
 int main(int argc, char* argv[])
 {
-	physical_memory.Pages = (int*) malloc(sizeof(int)*nframes);
-	for (int k = 0; k < nframes; k++) { physical_memory.Pages[k] = -1; }
-	// luego, si la página i está en memoria, ocurre que pages_in_PhysMem[i] != -1
 	if (argc != 5)
 	{
 		printf("use: ./virtmem <npages> <nframes> fifo|rand seq|rand|rev\n");
@@ -140,14 +137,22 @@ int main(int argc, char* argv[])
 	nframes = atoi(argv[2]);
 	policy  = argv[3];
 	pattern = argv[4];
-	tabla_marcos  = malloc(sizeof(int)*nframes);
-	for (int k = 0; k < nframes; k++) { tabla_marcos[k] = 0; }
-	BUFFER = malloc(sizeof(char)*200);
 	
 	printf("Cantidad de páginas: %d\n", npages);
 	printf("Cantidad de marcos: %d\n", nframes);
 	printf("Algoritmo de reemplazo de página: %s\n", policy);
 	printf("Patrón de acceso a memoria: %s\n", pattern);
+
+	
+	tabla_marcos  = malloc(sizeof(int)*nframes);
+	for (int k = 0; k < nframes; k++) { tabla_marcos[k] = -1; }
+	BUFFER = malloc(sizeof(char)*200);
+	
+		physical_memory.Pages = (int*) malloc(sizeof(int)*nframes);
+	for (int k = 0; k < nframes; k++) { physical_memory.Pages[k] = -1; }
+	// luego, si la página i está en memoria, ocurre que pages_in_PhysMem[i] != -1
+
+	
 	
 	disk = disk_open("myvirtualdisk", npages);   //struct disk* disk = disk_open("myvirtualdisk", npages);
 	if (! disk)

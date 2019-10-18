@@ -46,5 +46,5 @@ void color_start(int colorcode)
 
 void color_end()
 {
-	printf(" \033[0m");
+	printf("\033[0m");
 }

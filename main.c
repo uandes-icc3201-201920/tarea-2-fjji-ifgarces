@@ -97,11 +97,9 @@ void page_fault_handler( struct page_table* pt, int page )
 color_start(RED);
 	printf("page fault on page #%d\n", page);
 color_end();
-	
 	int p_frame, p_bits, p_block;
 	page_table_get_entry(pt, page, &p_frame, &p_bits);
 	strcpy(BUFFER, "");
-	
 	for (int frameNum = 0; frameNum < nframes; frameNum++)
 	{   // recorriendo marcos para ver si hay uno desocupado para poner la página directamente (no reemplazo de página)
 		if (tabla_marcos[frameNum] == 0)   // encontró marco desocupado
@@ -139,6 +137,11 @@ int main(int argc, char* argv[])
 	for (int k = 0; k < nframes; k++) { tabla_marcos[k] = 0; }
 	BUFFER = malloc(sizeof(char)*200);
 	
+	printf("Cantidad de páginas: %d\n", npages);
+	printf("Cantidad de marcos: %d\n", nframes);
+	printf("Algoritmo de reemplazo de página: %s\n", policy);
+	printf("Patrón de acceso a memoria: %s\n", pattern);
+	
 	disk = disk_open("myvirtualdisk", npages);   //struct disk* disk = disk_open("myvirtualdisk", npages);
 	if (! disk)
 	{
@@ -153,8 +156,8 @@ int main(int argc, char* argv[])
 	}
 	
 	virtmem = page_table_get_virtmem(pt);
-	physmem = (char*) malloc(sizeof(char)*500);
-	physmem = page_table_get_physmem(pt);  // por qué da warning??? dice que es un integer??? wtf???
+	physmem = (char*) malloc(sizeof(char)*5000);
+	physmem = page_table_get_physmem(pt);  // [!!!] por qué da warning??? dice que es un integer??? wtf??? ya no hay warning si le pongo malloc, aunque parece que eso causa en algún punto segmentation fault.
 
 	if (! strcmp(pattern, "seq"))        // sequential
 	{
@@ -174,24 +177,11 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 	
-color_start(BLUE);
+/* color_start(BLUE);
 	printf("[TEST] Page Table status: \n");
 	printf(" fd\t virtmem\t npages\t physmem\t nframes\t page_mapping\t page_bits\t\n");
-	//printf(" %d\t %s\t %d\t %s\t %d\t ", pt->fd, pt->virtmem, pt->npages, pt->physmem, pt->nframes);
-	//printf(" ??\t \'%s\'\t %d\t \'%s\'\t %d\t ??\t ??\n", virtmem, npages, physmem, nframes);
 	printf(" ??\t %s\t %d\t \'%s\'\t %d   \t ??\t ??\n", "<protected>", npages, physmem, nframes);
-	
-	/* unsigned int k;
-	for (k = 0; k < sizeof(pt->page_mapping)/sizeof(int); k++)
-	{
-		printf("%d,", pt->page_mapping[k]);
-	}
-	printf("\t ");
-	for (k = 0; k < sizeof(pt->page_bits)/sizeof(int); k++)
-	{
-		printf("%d,", pt->page_bits[k]);
-	} */
-color_end();
+color_end(); */
 	
 	printf("Cantidad de faltas de página: %d\n", page_fault_count);
 	printf("Cantidad de reemplazos de página %d\n", page_replace_count);
@@ -199,5 +189,8 @@ color_end();
 	page_table_delete(pt);
 	disk_close(disk);
 	free(BUFFER);
+	free(physmem);
+	free(physical_memory.Pages);
+	free(tabla_marcos);
 	return 0;
 }

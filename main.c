@@ -43,16 +43,19 @@ void replace_page( struct page_table* pt, int pageIN, const char* elalgoritmo )
 	
 	if (! strcmp(elalgoritmo, "fifo"))
 	{
-		int fist_page = 0;  // buscando la primera página de la tabla de páginas que 
+		int first_page = 0;  // buscando la primera página de la tabla de páginas que 
 		for (int f = 0; f < nframes; f++)
 		{
-			if (physical_memory.Pages[f] != -1)  // encontró primera página que se agregó a memoria
+			if (physical_memory.Pages[f] != -1)  // encontró primer frame en memoria ocupado con una página (FIRST)
 			{
-				fist_page = physical_memory.Pages[f];
+				first_page = physical_memory.Pages[f];
 				// guardar página en disco y colocar pageIN en physmem
-				disk_write(disk, (PAGE_SIZE*fist_page)/BLOCK_SIZE, (char*)fist_page);
-				page_table_get_physmem(pt)[f] = (char*)pageIN;
-				physical_memory.Pages[f] = pageIN;
+				sprintf(BUFFER, "%c", page_table_get_physmem(pt)[first_page*PAGE_SIZE]);  // usando esta vez BUFFER como auxiliar de forma distinta
+				const char* _aux = BUFFER;
+				disk_write(disk, (PAGE_SIZE*first_page)/BLOCK_SIZE, _aux);
+				
+				page_table_get_physmem(pt)[f] = (char)pageIN;
+				physical_memory.Pages[f] = pageIN;  // (FIRST OUT)
 			}
 		}
 	}
@@ -101,7 +104,7 @@ color_end();
 int main(int argc, char* argv[])
 {
 	physical_memory.Pages = (int*) malloc(sizeof(int)*nframes);
-	for (int k = 0; k < nframes; k++) { physical_memory.Pages = -1; }
+	for (int k = 0; k < nframes; k++) { physical_memory.Pages[k] = -1; }
 	// luego, si la página i está en memoria, ocurre que pages_in_PhysMem[i] != -1
 	if (argc != 5)
 	{

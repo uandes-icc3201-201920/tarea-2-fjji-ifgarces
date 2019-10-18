@@ -20,7 +20,7 @@ clean:
 	rm -f $(EXE) *.o *.tar.gz $(diskname)
 
 run:
-	./$(EXE) 50 20 fifo pattern3
+	./$(EXE) 50 20 fifo pattern1
 
 compress:
 	tar -zcvf TAREA2_fjji_ifgarces.tar.gz Makefile *.c *.h README.md informe-t2.pdf

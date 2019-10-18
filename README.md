@@ -1,3 +1,2 @@
-# Tarea 2
-- Ignacio Garcés Santander
-- Francisco Jiménez Iglesias
+# virtmem
+Operating Systems and Networks - Virtual Memory Assignment (Tarea 2)

@@ -5,12 +5,13 @@ diskname = myvirtualdisk
 CC = gcc
 
 $(EXE): *.c *.h Makefile clean ReDraw
-	$(CC) -o colormaster.o ColorMaster.c -c $(FLAGS)
+	#$(CC) -o colormaster.o ColorMaster.c -c $(FLAGS)
 	$(CC) -o page_table.o page_table.c -c $(FLAGS)
 	$(CC) -o disk.o disk.c -c $(FLAGS)
 	$(CC) -o program.o program.c -c $(FLAGS)
 	$(CC) -o main.o main.c -c $(FLAGS)
-	$(CC) -o $(EXE) main.o program.o disk.o page_table.o colormaster.o $(FLAGS)
+	#$(CC) -o $(EXE) main.o program.o disk.o page_table.o colormaster.o $(FLAGS)
+	$(CC) -o $(EXE) main.o program.o disk.o page_table.o $(FLAGS)
 
 ReDraw:
 	clear;reset

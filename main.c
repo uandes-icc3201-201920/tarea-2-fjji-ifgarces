@@ -26,8 +26,7 @@ int* tabla_marcos;  // segun Consejos
 // int en_memoria;  [sin usar] //auxiliar que marca si estamos en memoria o no
 
 
-int frame, bits;
-int npages, nframes;
+int frame, bits, npages, nframes;
 
 char* virtmem;
 char* physmem;
@@ -92,7 +91,6 @@ void replace_page( struct page_table* pt, int pageIN, const char* elalgoritmo )
 		printcolor(RED, "[!] Error, algoritmo de reemplazo de página inválido. Debe ser \'fifo\' o \'rand\'\n");
 		exit(1);
 	}
-	
 }
 
 
@@ -110,9 +108,8 @@ color_end();
 	{   // recorriendo marcos para ver si hay uno desocupado para poner la página directamente (no reemplazo de página)
 		if (tabla_marcos[frameNum] == -1)   // encontró marco desocupado
 		{
-			//printf("[test] FOUND FREE FRAME\n");
 			strcpy(BUFFER, "");
-			p_block = (PAGE_SIZE * page) / BLOCK_SIZE;
+			p_block = (PAGE_SIZE * page) / BLOCK_SIZE;  // ??!!
 			disk_read(disk, p_block, BUFFER);
 			physmem[frameNum*PAGE_SIZE] = BUFFER[0];  // poniendo página del disco en la physmem
 			tabla_marcos[frameNum] = 1;
@@ -138,21 +135,18 @@ int main(int argc, char* argv[])
 	policy  = argv[3];
 	pattern = argv[4];
 	
-	printf("Cantidad de páginas: %d\n", npages);
+	printf("\n\nCantidad de páginas: %d\n", npages);
 	printf("Cantidad de marcos: %d\n", nframes);
 	printf("Algoritmo de reemplazo de página: %s\n", policy);
 	printf("Patrón de acceso a memoria: %s\n", pattern);
-
 	
 	tabla_marcos  = malloc(sizeof(int)*nframes);
 	for (int k = 0; k < nframes; k++) { tabla_marcos[k] = -1; }
 	BUFFER = malloc(sizeof(char)*200);
 	
-		physical_memory.Pages = (int*) malloc(sizeof(int)*nframes);
-	for (int k = 0; k < nframes; k++) { physical_memory.Pages[k] = -1; }
-	// luego, si la página i está en memoria, ocurre que pages_in_PhysMem[i] != -1
+	physical_memory.Pages = (int*) malloc(sizeof(int)*nframes);
+	for (int k = 0; k < nframes; k++) { physical_memory.Pages[k] = -1; } // luego, si la página i está en memoria, ocurre que pages_in_PhysMem[i] != -1
 
-	
 	
 	disk = disk_open("myvirtualdisk", npages);   //struct disk* disk = disk_open("myvirtualdisk", npages);
 	if (! disk)

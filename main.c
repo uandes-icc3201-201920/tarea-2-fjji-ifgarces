@@ -109,9 +109,9 @@ color_end();
 		if (tabla_marcos[frameNum] == -1)   // encontró marco desocupado
 		{
 			strcpy(BUFFER, "");
-			p_block = (PAGE_SIZE * page) / BLOCK_SIZE;  // ??!!
-			disk_read(disk, p_block, BUFFER);
-			physmem[frameNum*PAGE_SIZE] = BUFFER[0];  // poniendo página del disco en la physmem
+			p_block = (PAGE_SIZE * page) / BLOCK_SIZE;  // ??
+			disk_read(disk, p_block, BUFFER);   // arroja error! por qué? incluso con p_block = page simplemente
+			physmem[frameNum*PAGE_SIZE] = BUFFER[0];  // poniendo página del disco en la physmem (esto sería, como en el ejemplo del dibujo del enunciado, acceder al tercer elemento de "ABC": 'C' = "C"[0])
 			tabla_marcos[frameNum] = 1;
 			physical_memory.PageCount++;
 			return;

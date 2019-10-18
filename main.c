@@ -26,12 +26,25 @@ int is_physmem_FULL;  // verdadero si pt->physmem está lleno (todos los frames 
 unsigned int* tabla_marcos;  // segun Consejos
 int en_memoria; //auxiliar que marca si estamos en memoria o no
 
+
+int frame, bits;
 int npages, nframes;
+
 char* virtmem;
 char* physmem;
 const char* policy;  // lru | fifo  (lru == rand?)
 const char* pattern;  // antes "program" = pattern1|pattern2|pattern3
 
+/*
+
+void replace_fifo(struct page_table* pt, int page){
+
+}
+
+void replace_rand(struct page_table* pt, int page){
+
+}
+*/
 struct PhysMem_data
 {
 	int* Pages;  // contiene [índice de] páginas en memoria física. Rellena con -1s al principio.
@@ -97,6 +110,7 @@ void page_fault_handler( struct page_table* pt, int page )
 color_start(RED);
 	printf("page fault on page #%d\n", page);
 color_end();
+	//page_table_set_entry(pt, page, &frame, &bits); //maybe
 	int p_frame, p_bits, p_block;
 	page_table_get_entry(pt, page, &p_frame, &p_bits);
 	strcpy(BUFFER, "");
@@ -180,6 +194,7 @@ int main(int argc, char* argv[])
 /* color_start(BLUE);
 	printf("[TEST] Page Table status: \n");
 	printf(" fd\t virtmem\t npages\t physmem\t nframes\t page_mapping\t page_bits\t\n");
+
 	printf(" ??\t %s\t %d\t \'%s\'\t %d   \t ??\t ??\n", "<protected>", npages, physmem, nframes);
 color_end(); */
 	

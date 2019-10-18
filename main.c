@@ -49,19 +49,37 @@ void replace_page( struct page_table* pt, int pageIN, const char* elalgoritmo )
 			if (physical_memory.Pages[f] != -1)  // encontró primer frame en memoria ocupado con una página (FIRST)
 			{
 				first_page = physical_memory.Pages[f];
-				// guardar página en disco y colocar pageIN en physmem
+				// ahora guardar página en disco y colocar pageIN en physmem
 				sprintf(BUFFER, "%c", page_table_get_physmem(pt)[first_page*PAGE_SIZE]);  // usando esta vez BUFFER como auxiliar de forma distinta
 				const char* _aux = BUFFER;
 				disk_write(disk, (PAGE_SIZE*first_page)/BLOCK_SIZE, _aux);
 				
-				page_table_get_physmem(pt)[f] = (char)pageIN;
+				physmem = (char)pageIN;  // physmem[f] ???
 				physical_memory.Pages[f] = pageIN;  // (FIRST OUT)
 			}
 		}
 	}
 	if (! strcmp(elalgoritmo, "rand"))  // == "lru" en el enunciado.
 	{
-		
+		int iterations, random_f, my_page;
+		while (1)
+		{
+			random_f = rand()%nframes;
+			if (physical_memory.Pages[random_f] != -1)   // cuando encuentra frame con una página, no vacío
+			{
+				my_page = physical_memory.Pages[random_f];
+				sprintf(BUFFER, "%c", page_table_get_physmem(pt)[random_f*PAGE_SIZE]);  // usando esta vez BUFFER como auxiliar de forma distinta
+				const char* _aux = BUFFER;
+				disk_write(disk, (PAGE_SIZE*random_f)/BLOCK_SIZE, _aux);
+				
+				physmem = (char)pageIN;   // physmem[f] ???
+				physical_memory.Pages[random_f] = pageIN;  // (FIRST OUT)
+				return;
+			}
+			
+			if (iterations == 20000) { printf("[!] Error: se quedó pegado en función replace_page.\n"); exit(1); }
+			iterations++;
+		}
 	}
 	else
 	{
@@ -90,7 +108,7 @@ color_end();
 			strcpy(BUFFER, "");
 			p_block = (PAGE_SIZE * page) / BLOCK_SIZE;
 			disk_read(disk, p_block, BUFFER);
-			page_table_get_physmem(pt)[frameNum*PAGE_SIZE] = BUFFER[0];  // poniendo página del disco en la physmem
+			physmem = BUFFER[0];  // physmem[frameNum*PAGE_SIZE] ???. poniendo página del disco en la physmem
 			tabla_marcos[frameNum] = 1;
 			physical_memory.PageCount++;
 			return;
@@ -134,7 +152,8 @@ int main(int argc, char* argv[])
 	}
 	
 	virtmem = page_table_get_virtmem(pt);
-	physmem = page_table_get_physmem(pt);
+	//physmem = page_table_get_physmem(pt);  // por qué da warning??? dice que es un integer??? wtf????
+	strcpy(physmem, page_table_get_physmem(pt));
 
 	if (! strcmp(pattern, "seq"))        // sequential
 	{
@@ -158,7 +177,7 @@ color_start(GREEN);
 	printf(" fd\t virtmem\t npages\t physmem\t nframes\t page_mapping\t page_bits\t\n");
 	//printf(" %d\t %s\t %d\t %s\t %d\t ", pt->fd, pt->virtmem, pt->npages, pt->physmem, pt->nframes);
 	//printf(" ??\t \'%s\'\t %d\t \'%s\'\t %d\t ??\t ??\n", virtmem, npages, physmem, nframes);
-	printf(" ??\t %s\t %d\t \'%s\'\t %d   \t ??\t ??\n", "<protected>", npages, page_table_get_physmem(pt), nframes);
+	printf(" ??\t %s\t %d\t \'%d\'\t %d   \t ??\t ??\n", "<protected>", npages, physmem, nframes);
 	
 	/* unsigned int k;
 	for (k = 0; k < sizeof(pt->page_mapping)/sizeof(int); k++)

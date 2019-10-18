@@ -27,12 +27,46 @@ int is_physmem_FULL;  // verdadero si pt->physmem está lleno (todos los frames 
 unsigned int* tabla_marcos;  // segun Consejos
 int en_memoria; //auxiliar que marca si estamos en memoria o no
 
+int frame, bits;
+
 int npages;
 int nframes;
 char* virtmem;
 char* physmem;
 const char* policy;  // lru | fifo  (lru == rand?)
 const char* pattern;  // antes "program" = pattern1|pattern2|pattern3
+
+
+void replace_fifo(struct page_table* pt, int page){
+
+}
+
+void replace_rand(struct page_table* pt, int page){
+
+}
+
+void replace_page( struct page_table* pt, int page, const char* mode )
+{
+	page_replace_count++;
+	//int frameNum, frame, bits, block;
+	
+	if (! strcmp(mode, "fifo"))
+	{
+		printcolor(RED, "[!]");
+		replace_fifo(pt,page);
+	}
+	if (! strcmp(mode, "rand"))  // == "lru" en el enunciado.
+	{
+		printcolor(RED, "[!]");
+		replace_rand(pt,page);
+	}
+	else
+	{
+		printcolor(RED, "[!] Error, política de algoritmo de reemplazo de página inválida. Debe ser \'fifo\' o \'lru\'\n");
+		exit(1);
+	}
+	
+}
 
 void page_fault_handler( struct page_table* pt, int page )
 {   /// SE GATILLA AL QUERER ACCEDER A UNA PÁGINA QUE NO ESTÁ EN MEMORIA VIRTUAL (pt->virtmem) Y HAY QUE TRAERLA DESDE EL DISCO (disk)
@@ -41,8 +75,9 @@ color_start(RED);
 	printf("page fault on page #%d\n", page);
 color_end();
 	
-	int frame, bits;
 	page_table_get_entry(pt, page, &frame, &bits); // Segun consejos --no se cae 
+	//page_table_set_entry(pt, page, &frame, &bits);
+	page_table_print_entry( pt, page );
 	strcpy(BUFFER, "");
 	
 	/* for (int i = 0; i < npages; i++)   // recorriendo tabla de páginas hasta encontrar una libre
@@ -64,7 +99,7 @@ color_end();
 		if (tabla_marcos[frameNum] == 0)  // encontró marco desocupado
 		{
 			strcpy(BUFFER, "");
-			block = (PAGE_SIZE*i)/BLOCK_SIZE;  // ??
+			int block = (PAGE_SIZE*frameNum)/BLOCK_SIZE;  // ??
 			disk_read(disk, block, BUFFER);
 			
 			// [!] poner página del disco en la physmem
@@ -75,28 +110,6 @@ color_end();
 	}
 	// llega aquí si ni hay ningun marco disponible
 	replace_page(pt, page, policy);
-}
-
-
-void replace_page( struct page_table* pt, int page, const char* mode )
-{
-	page_replace_count++;
-	int frameNum, frame, bits, block;
-	
-	if (! strcmp(mode, "fifo"))
-	{
-		
-	}
-	if (! strcmp(mode, "rand"))  // == "lru" en el enunciado.
-	{
-		
-	}
-	else
-	{
-		printcolor(RED, "[!] Error, política de algoritmo de reemplazo de página inválida. Debe ser \'fifo\' o \'lru\'\n");
-		exit(1);
-	}
-	
 }
 
 
@@ -167,6 +180,11 @@ color_start(BLUE);
 		printf("%d,", pt->page_bits[k]);
 	} */
 color_end();
+
+color_start(GREEN);
+	//page_table_get_entry(pt, page, &frame, &bits);
+	//page_table_print_entry( pt, page );
+	color_end();
 	
 	printf("Cantidad de faltas de página: %d\n", page_fault_count);
 	printf("Cantidad de reemplazos de página %d\n", page_replace_count);

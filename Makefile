@@ -21,7 +21,7 @@ clean:
 
 run:
 	# ./virtmem <npages> <nframes> fifo|rand seq|rand|rev
-	./$(EXE) 50 25 fifo seq
+	./$(EXE) 50 30 fifo seq
 
 compress:
 	tar -zcvf TAREA2_fjji_ifgarces.tar.gz Makefile *.c *.h README.md informe-t2.docx

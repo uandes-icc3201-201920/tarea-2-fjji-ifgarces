@@ -66,7 +66,8 @@ void FIFO_mode(struct page_table *pt,int page,int frame,int bits){
 		disk_read(disk, page, &physmem[queda_frame*PAGE_SIZE]);
 		tabla_marcos[frame] = page;
 		bit_tabla_marcos[frame] = bits;//seteamos la tabla
-		page_table_set_entry(pt,page,queda_frame,bits);//lo pasamos a pt
+		page_table_set_entry(pt,page,fifo_entradas[queda_frame],bits);//lo pasamos a pt
+		
 		
 	}
 }
